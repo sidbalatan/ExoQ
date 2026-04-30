@@ -90,6 +90,15 @@ class HabitabilityScoringModule:
         # Initialize stellar habitability score
         df['stellar_hab_score'] = 0.0
         
+        # Check if required columns exist
+        required_cols = ['teff_gspphot', 'logg_gspphot', 'ruwe']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        
+        if missing_cols:
+            logger.warning(f"Missing columns for stellar habitability: {missing_cols}")
+            # Return default scores if columns missing
+            return df
+        
         # Temperature score (optimal: 3900-4800 K)
         temp_score = np.where(
             (df['teff_gspphot'] >= 3900) & (df['teff_gspphot'] <= 4800),
