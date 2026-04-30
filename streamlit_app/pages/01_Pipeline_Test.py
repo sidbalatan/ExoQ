@@ -43,9 +43,16 @@ st.sidebar.markdown(
     "🔒 Module 7 — Results Summary  \n"
     "🔒 Module 8 — Data Export"
 )
+st.sidebar.markdown("---")
+run_pipeline = st.sidebar.button(
+    "� Run Full Pipeline",
+    disabled=True,
+    help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+    use_container_width=True,
+)
 st.sidebar.caption(
-    "🔒 Modules 2–8 unlock after **6 months of membership** "
-    "*or* **12 contributed posts**."
+    "🔒 **Run Full Pipeline** is a members-only feature.\n\n"
+    "Unlocks after **6 months of membership** *or* **12 contributed posts**."
 )
 
 st.sidebar.markdown("---")
@@ -94,20 +101,7 @@ elif data_source == "Manual Entry":
 # members-only Run Full Pipeline. No user-facing toggle is needed.
 use_mock = True
 
-btn_col1, btn_col2 = st.columns([1, 3])
-with btn_col1:
-    run_module1 = st.button("▶️ Run Module 1", type="primary", use_container_width=True)
-with btn_col2:
-    run_pipeline = st.button(
-        "🚀 Run Full Pipeline",
-        disabled=True,
-        help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
-        use_container_width=True,
-    )
-st.caption(
-    "🔒 **Run Full Pipeline** is a members-only feature — "
-    "unlocks after **6 months of membership** *or* **12 contributed posts**."
-)
+run_module1 = st.button("▶️ Run Module 1", type="primary")
 st.markdown("---")
 
 # Initialize session state
