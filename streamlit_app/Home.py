@@ -439,11 +439,14 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     ]:
                         if col in enriched.columns:
                             df[col] = enriched[col]
-                    # Replace the synthetic source_id with the real Gaia DR3 one
-                    # whenever the cross-match succeeded.
+                    # Replace the synthetic source_id (if any) with the real
+                    # Gaia DR3 one whenever the cross-match succeeded.
                     if "source_id" in enriched.columns:
                         real_sid = enriched["source_id"]
-                        df["source_id"] = real_sid.where(real_sid.notna(), df["source_id"])
+                        if "source_id" in df.columns:
+                            df["source_id"] = real_sid.where(real_sid.notna(), df["source_id"])
+                        else:
+                            df["source_id"] = real_sid
                     module1.data = df
 
                 # Surface match diagnostics so the user can see what came back.
