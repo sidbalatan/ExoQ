@@ -42,12 +42,33 @@ class HabitabilityScoringModule:
         tuple
             (DataFrame with habitability scores, scoring report)
         """
+        # Validate input
+        if not isinstance(stellar_data, pd.DataFrame):
+            logger.error(f"stellar_data is not a DataFrame: {type(stellar_data)}")
+            # Return empty DataFrame with required structure
+            empty_df = pd.DataFrame({
+                'source_id': [],
+                'stellar_hab_score': [],
+                'exo_hab_score': [],
+                'esi': []
+            })
+            scoring_report = {
+                'n_total': 0,
+                'n_highly_habitable': 0,
+                'n_habitable': 0,
+                'n_exo_candidates': 0,
+                'n_habitable_exo': 0,
+                'best_star_id': None,
+                'best_star_score': 0,
+                'max_esi': 0
+            }
+            return empty_df, scoring_report
+        
         logger.info(f"Scoring habitability for {len(stellar_data)} stars")
-        logger.info(f"stellar_data type: {type(stellar_data)}")
-        logger.info(f"stellar_data columns: {stellar_data.columns.tolist() if isinstance(stellar_data, pd.DataFrame) else 'N/A'}")
+        logger.info(f"stellar_data columns: {stellar_data.columns.tolist()}")
         
         # Merge stellar and transit data if provided
-        if transit_data is not None:
+        if transit_data is not None and isinstance(transit_data, pd.DataFrame):
             df = pd.merge(stellar_data, transit_data, on='source_id', how='left')
             logger.info(f"After merge, df columns: {df.columns.tolist()}")
         else:
