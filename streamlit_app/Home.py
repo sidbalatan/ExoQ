@@ -725,6 +725,77 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     f"🥇 **{gold}** Certified · 🥈 **{silver}** Need Follow Up · 🥉 **{failed}** Failed."
                 )
 
+            # ----- Certificate of Discovery ----------------------------
+            if survivors > 0:
+                st.markdown(
+                    "<p style='font-size: 1rem; font-weight: 600; margin: 0.8rem 0 0.1rem 0;'>"
+                    "Certificate of Discovery</p>",
+                    unsafe_allow_html=True,
+                )
+                st.caption(
+                    "Downloadable PNG you can share on social media or submit to the "
+                    "ExoQ public gallery. The data on the certificate is identical to the "
+                    "live archive verdict above."
+                )
+
+                from certificate import render_certificate
+                from workspace.identity import current_display_name
+
+                # Pull a few survivor source_ids for the certificate footer.
+                _sample_ids = []
+                if "source_id" in data.columns:
+                    _sample_ids = (
+                        data.loc[data.get("tier", "").astype(str)
+                                .str.contains("Certified|Follow", regex=True, na=False), "source_id"]
+                            .dropna().head(5).tolist()
+                    )
+                    if not _sample_ids:
+                        _sample_ids = data["source_id"].dropna().head(5).tolist()
+
+                _display_name = current_display_name() or current_user() or "ExoQ Pioneer"
+                _run_id = st.session_state.get("m1_last_saved_run_id", "")
+                try:
+                    _png_bytes = render_certificate(
+                        display_name=_display_name,
+                        survivors_count=int(survivors),
+                        inputs_count=int(inputs),
+                        gold=int(gold), silver=int(silver), failed=int(failed),
+                        sample_source_ids=_sample_ids,
+                        run_id=_run_id,
+                    )
+                    st.image(_png_bytes, use_container_width=True)
+
+                    cert_safe_name = (
+                        (_display_name or "ExoQ_Pioneer").replace(" ", "_")
+                        + "_ExoQ_Certificate.png"
+                    )
+                    btn_left, btn_right = st.columns([1, 1])
+                    with btn_left:
+                        st.download_button(
+                            "⬇️ Download Certificate (PNG)",
+                            data=_png_bytes,
+                            file_name=cert_safe_name,
+                            mime="image/png",
+                            type="primary",
+                        )
+                    with btn_right:
+                        st.button(
+                            "🌐 Submit to ExoQ Gallery (coming soon)",
+                            disabled=True,
+                            help=(
+                                "The public gallery launches with Module 8. "
+                                "Until then, download the PNG and share manually."
+                            ),
+                        )
+
+                    if not current_user():
+                        st.caption(
+                            "Tip: open **☰ Main Menu** and sign in with your name "
+                            "to personalise the certificate."
+                        )
+                except Exception as exc:  # pragma: no cover -- never block the run on a render hiccup
+                    st.warning(f"Certificate could not be rendered: {exc}")
+
             # Fire balloons exactly once per Run.
             if not st.session_state.get('m1_celebrated', False):
                 st.balloons()
