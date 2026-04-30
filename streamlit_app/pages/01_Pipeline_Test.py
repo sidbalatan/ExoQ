@@ -61,13 +61,11 @@ if 'pipeline_step' not in st.session_state:
     st.session_state.pipeline_step = 0
 if 'pipeline_started' not in st.session_state:
     st.session_state.pipeline_started = False
-if 'modules' not in st.session_state:
-    st.session_state.modules = {}
 
 if run_pipeline:
     st.session_state.pipeline_step = 0
     st.session_state.pipeline_started = True
-    st.session_state.modules = {}
+    st.session_state.pipeline_data = None
     st.rerun()
 
 # Show instruction if pipeline hasn't started
@@ -82,7 +80,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.info("Loading coordinates...")
             
             module1 = DataInputModule()
-            st.session_state.modules['module1'] = module1
             
             if data_source == "Virgin List":
                 df, validation = module1.load_from_virgin_list(n_stars=n_stars)
@@ -103,9 +100,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.session_state.pipeline_step = 1
             st.rerun()
         else:
-            module1 = st.session_state.modules.get('module1')
-            if module1:
-                st.success(module1.get_success_summary())
+            st.success("Data input complete!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'ra', 'dec']].head())
         
         if st.session_state.pipeline_step == 1:
@@ -120,7 +115,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
             st.info("Retrieving stellar parameters from Gaia DR3...")
             
             module2 = StellarParameterModule()
-            st.session_state.modules['module2'] = module2
             df, quality = module2.get_parameters(st.session_state.pipeline_data, use_mock=use_mock)
             
             st.success(module2.get_success_summary())
@@ -130,9 +124,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
             st.session_state.pipeline_step = 2
             st.rerun()
         else:
-            module2 = st.session_state.modules.get('module2')
-            if module2:
-                st.success(module2.get_success_summary())
+            st.success("Stellar parameters retrieved!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']].head())
         
         if st.session_state.pipeline_step == 2:
@@ -147,7 +139,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
             st.info("Cross-matching with NASA Exoplanet Archive...")
             
             module3 = ExoplanetCrossMatchModule()
-            st.session_state.modules['module3'] = module3
             df, report = module3.cross_match(st.session_state.pipeline_data, use_mock=use_mock)
             
             st.success(module3.get_success_summary())
@@ -157,9 +148,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
             st.session_state.pipeline_step = 3
             st.rerun()
         else:
-            module3 = st.session_state.modules.get('module3')
-            if module3:
-                st.success(module3.get_success_summary())
+            st.success("Exoplanet cross-match complete!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']].head())
         
         if st.session_state.pipeline_step == 3:
@@ -174,7 +163,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
             st.info("Retrieving TESS light curves from MAST API...")
             
             module4 = TESSLightCurveModule()
-            st.session_state.modules['module4'] = module4
             df, report = module4.retrieve_lightcurves(st.session_state.pipeline_data, use_mock=use_mock)
             
             st.success(module4.get_success_summary())
@@ -184,9 +172,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
             st.session_state.pipeline_step = 4
             st.rerun()
         else:
-            module4 = st.session_state.modules.get('module4')
-            if module4:
-                st.success(module4.get_success_summary())
+            st.success("TESS light curves retrieved!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'tess_available', 'sectors', 'data_points', 'cadence_minutes']].head())
         
         if st.session_state.pipeline_step == 4:
@@ -201,7 +187,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
             st.info("Detecting transits using BLS periodogram...")
             
             module5 = TransitDetectionModule()
-            st.session_state.modules['module5'] = module5
             df, report = module5.detect_transits(st.session_state.pipeline_data, use_mock=use_mock)
             
             st.success(module5.get_success_summary())
@@ -211,9 +196,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
             st.session_state.pipeline_step = 5
             st.rerun()
         else:
-            module5 = st.session_state.modules.get('module5')
-            if module5:
-                st.success(module5.get_success_summary())
+            st.success("Transit detection complete!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'has_transit_candidate', 'transit_period', 'transit_snr']].head())
         
         if st.session_state.pipeline_step == 5:
@@ -228,7 +211,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             st.info("Scoring habitability of stars and exoplanets...")
             
             module6 = HabitabilityScoringModule()
-            st.session_state.modules['module6'] = module6
             df, report = module6.score_habitability(st.session_state.pipeline_data, st.session_state.pipeline_data)
             
             st.success(module6.get_success_summary())
@@ -238,9 +220,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             st.session_state.pipeline_step = 6
             st.rerun()
         else:
-            module6 = st.session_state.modules.get('module6')
-            if module6:
-                st.success(module6.get_success_summary())
+            st.success("Habitability scoring complete!")
             st.dataframe(st.session_state.pipeline_data[['source_id', 'stellar_hab_score', 'exo_hab_score', 'esi']].head())
         
         if st.session_state.pipeline_step == 6:
@@ -255,7 +235,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
             st.info("Generating comprehensive results summary...")
             
             module7 = ResultsSummaryModule()
-            st.session_state.modules['module7'] = module7
             df, report = module7.generate_summary(st.session_state.pipeline_data)
             
             st.success(module7.get_success_summary())
@@ -269,9 +248,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
             st.session_state.pipeline_step = 7
             st.rerun()
         else:
-            module7 = st.session_state.modules.get('module7')
-            if module7:
-                st.success(module7.get_success_summary())
+            st.success("Results summary complete!")
             
             # Display top discoveries
             st.subheader("Top Discoveries")
@@ -290,7 +267,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
             st.info("Exporting results in multiple formats...")
             
             module8 = DataExportModule()
-            st.session_state.modules['module8'] = module8
             report, summary = module8.export_data(st.session_state.pipeline_data, formats=['csv', 'json'])
             
             st.success(summary)
@@ -302,9 +278,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
             st.session_state.pipeline_step = 8
             st.rerun()
         else:
-            module8 = st.session_state.modules.get('module8')
-            if module8:
-                st.success("Data export complete!")
+            st.success("Data export complete!")
             
             # Display export report
             st.subheader("Export Report")
@@ -322,5 +296,4 @@ if st.session_state.pipeline_step > 0 or st.session_state.pipeline_started:
         st.session_state.pipeline_step = 0
         st.session_state.pipeline_data = None
         st.session_state.pipeline_started = False
-        st.session_state.modules = {}
         st.rerun()
