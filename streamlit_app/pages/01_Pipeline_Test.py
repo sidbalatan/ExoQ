@@ -214,14 +214,26 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             df, report = module6.score_habitability(st.session_state.pipeline_data, st.session_state.pipeline_data)
             
             st.success(module6.get_success_summary())
-            st.dataframe(df[['source_id', 'stellar_hab_score', 'exo_hab_score', 'esi']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id', 'stellar_hab_score']
+            if 'exo_hab_score' in df.columns:
+                cols_to_show.append('exo_hab_score')
+            if 'esi' in df.columns:
+                cols_to_show.append('esi')
+            st.dataframe(df[cols_to_show].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 6
             st.rerun()
         else:
             st.success("Habitability scoring complete!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'stellar_hab_score', 'exo_hab_score', 'esi']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id', 'stellar_hab_score']
+            if 'exo_hab_score' in st.session_state.pipeline_data.columns:
+                cols_to_show.append('exo_hab_score')
+            if 'esi' in st.session_state.pipeline_data.columns:
+                cols_to_show.append('esi')
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 6:
             if st.button("Continue to Module 7", key="m6_continue"):
