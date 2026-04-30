@@ -133,50 +133,47 @@ with st.expander("Read more"):
     )
 
 st.caption(
-    "Type RA/Dec pairs below — or click the 📂 icon on the right to upload a CSV. "
+    "Upload a CSV below, or type RA/Dec pairs / catalog IDs in the textarea. "
     "Accepts: **RA / Dec** *(required)*, **Gaia DR3 IDs**, **TIC IDs**, "
     "**KIC / EPIC IDs**, **2MASS / Spitzer IDs**. Extra columns "
     "(Teff, logg, RUWE, photometry, …) are auto-recognized."
 )
 
-input_left, input_right = st.columns([3, 2])
-with input_left:
-    manual_text = st.text_area(
-        "Coordinates or Identifiers",
-        value=(
-            "150.0, 10.0\n"
-            "Gaia DR3 4271989156548409344\n"
-            "TIC 261136679\n"
-            "HD 209458\n"
-            "2MASS J05551028+2351124"
-        ),
-        height=170,
-        help=(
-            "One entry per line. Each line can be:\n"
-            "• 'RA, Dec' in decimal degrees (e.g. 150.0, 10.0)\n"
-            "• Gaia DR3 source_id (e.g. 'Gaia DR3 4271989156548409344' or just the number)\n"
-            "• TIC, KIC, EPIC, 2MASS, HD, HIP, TYC ID, or a common name\n"
-            "Identifiers are resolved to RA/Dec via Simbad (with a MAST TIC fallback).\n"
-            "Lines starting with # are ignored."
-        ),
-    )
-    st.caption(
-        "ℹ️ The lines above are samples. **Delete them and paste in your own** "
-        "RA/Dec pairs *or* catalog IDs (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC) "
-        "before clicking *Run Module 1*."
-    )
-with input_right:
-    st.markdown("<div style='height: 1.85rem'></div>", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader(
-        "📂 Upload CSV",
-        type=["csv"],
-        label_visibility="visible",
-        help=(
-            "Upload a CSV instead of typing. Must contain at least 'ra' and 'dec' "
-            "columns. Validated K Dwarf catalogs (with Teff, logg, RUWE, DR3Name, etc.) "
-            "are auto-recognized. When a file is uploaded it overrides the manual entry above."
-        ),
-    )
+# Upload widget on its own full-width row, with a green Browse button.
+uploaded_file = st.file_uploader(
+    "📂 Upload CSV (overrides the manual entry below when a file is selected)",
+    type=["csv"],
+    help=(
+        "Upload a CSV instead of typing. Must contain at least 'ra' and 'dec' "
+        "columns. Validated K Dwarf catalogs (with Teff, logg, RUWE, DR3Name, etc.) "
+        "are auto-recognized. When a file is uploaded it overrides the manual entry below."
+    ),
+)
+
+manual_text = st.text_area(
+    "Coordinates or Identifiers",
+    value=(
+        "150.0, 10.0\n"
+        "Gaia DR3 4271989156548409344\n"
+        "TIC 261136679\n"
+        "HD 209458\n"
+        "2MASS J05551028+2351124"
+    ),
+    height=170,
+    help=(
+        "One entry per line. Each line can be:\n"
+        "• 'RA, Dec' in decimal degrees (e.g. 150.0, 10.0)\n"
+        "• Gaia DR3 source_id (e.g. 'Gaia DR3 4271989156548409344' or just the number)\n"
+        "• TIC, KIC, EPIC, 2MASS, HD, HIP, TYC ID, or a common name\n"
+        "Identifiers are resolved to RA/Dec via Simbad (with a MAST TIC fallback).\n"
+        "Lines starting with # are ignored."
+    ),
+)
+st.caption(
+    "ℹ️ The lines above are samples. **Delete them and paste in your own** "
+    "RA/Dec pairs *or* catalog IDs (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC) "
+    "before clicking *Run Module 1*."
+)
 
 n_stars = st.slider(
     "Max stars to load (CSV only)",
