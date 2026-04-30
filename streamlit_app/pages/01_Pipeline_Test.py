@@ -67,6 +67,15 @@ if data_source == "Upload CSV":
         help="CSV must contain at least 'ra' and 'dec' columns. Validated K Dwarf catalogs (with Teff, logg, RUWE, DR3Name, etc.) are auto-recognized.",
     )
 
+manual_text = ""
+if data_source == "Manual Entry":
+    manual_text = st.sidebar.text_area(
+        "Coordinates (one per line, RA,Dec)",
+        value="150.0, 10.0\n200.0, -20.0\n250.0, 30.0",
+        height=150,
+        help="Enter one coordinate pair per line as 'RA, Dec' in decimal degrees. Lines starting with # are ignored.",
+    )
+
 use_mock = st.sidebar.checkbox("Use mock data (Modules 2-8)", value=True, help="Use mock data for testing (no API calls)")
 
 run_pipeline = st.sidebar.button("🚀 Run Full Pipeline", type="primary")
@@ -133,18 +142,30 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 df, validation = module1.load_from_virgin_list(n_stars=n_stars)
             elif data_source == "Vetted List":
                 df, validation = module1.load_from_vetted_list(n_stars=n_stars)
-            else:
-                coordinates = [
-                    {'ra': 150.0, 'dec': 10.0},
-                    {'ra': 200.0, 'dec': -20.0},
-                    {'ra': 250.0, 'dec': 30.0}
-                ]
+            else:  # Manual Entry
+                coordinates = []
+                for line in (manual_text or "").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    # Accept comma, whitespace, or tab separators
+                    parts = [p for p in line.replace(",", " ").split() if p]
+                    if len(parts) < 2:
+                        continue
+                    try:
+                        coordinates.append({"ra": float(parts[0]), "dec": float(parts[1])})
+                    except ValueError:
+                        continue
+                if not coordinates:
+                    st.error("No valid 'RA, Dec' pairs found in the manual entry box.")
+                    st.stop()
                 df, validation = module1.load_manual_entry(coordinates)
             
             summary = module1.get_success_summary()
             st.session_state.summaries['module1'] = summary
             st.success(summary)
-            st.dataframe(df[['source_id', 'ra', 'dec']].head())
+            preview_cols = [c for c in ['source_id', 'gaia_dr3_name', 'ra', 'dec', 'teff_gspphot', 'k_subtype', 'validation_tier'] if c in df.columns]
+            st.dataframe(df[preview_cols].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 1
