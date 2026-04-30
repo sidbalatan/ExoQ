@@ -54,10 +54,8 @@ data_source = st.sidebar.selectbox(
     ["Real K Dwarf Catalog", "Upload CSV", "Virgin List", "Vetted List", "Manual Entry"],
     help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV. 'Upload CSV' lets you upload your own file.",
 )
-random_sample = st.sidebar.checkbox(
-    "Random sample from catalog", value=True,
-    help="Only used for 'Real K Dwarf Catalog'. Off = take first N rows.",
-)
+# Default catalog sampling to random; user-facing toggle removed.
+random_sample = True
 
 uploaded_file = None
 if data_source == "Upload CSV":
