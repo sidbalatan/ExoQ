@@ -100,7 +100,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.session_state.pipeline_step = 1
             st.rerun()
         else:
-            st.success("Data input complete!")
+            module1 = DataInputModule()
+            module1.data = st.session_state.pipeline_data
+            st.success(module1.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id']
             if 'ra' in st.session_state.pipeline_data.columns:
@@ -130,7 +132,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
             st.session_state.pipeline_step = 2
             st.rerun()
         else:
-            st.success("Stellar parameters retrieved!")
+            module2 = StellarParameterModule()
+            module2.data = st.session_state.pipeline_data
+            st.success(module2.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']:
@@ -159,7 +163,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
             st.session_state.pipeline_step = 3
             st.rerun()
         else:
-            st.success("Exoplanet cross-match complete!")
+            module3 = ExoplanetCrossMatchModule()
+            module3.data = st.session_state.pipeline_data
+            st.success(module3.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']:
@@ -188,7 +194,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
             st.session_state.pipeline_step = 4
             st.rerun()
         else:
-            st.success("TESS light curves retrieved!")
+            module4 = TESSLightCurveModule()
+            module4.data = st.session_state.pipeline_data
+            st.success(module4.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['tess_available', 'sectors', 'data_points', 'cadence_minutes']:
@@ -217,7 +225,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
             st.session_state.pipeline_step = 5
             st.rerun()
         else:
-            st.success("Transit detection complete!")
+            module5 = TransitDetectionModule()
+            module5.data = st.session_state.pipeline_data
+            st.success(module5.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['has_transit_candidate', 'transit_period', 'transit_snr']:
@@ -252,7 +262,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             st.session_state.pipeline_step = 6
             st.rerun()
         else:
-            st.success("Habitability scoring complete!")
+            module6 = HabitabilityScoringModule()
+            module6.data = st.session_state.pipeline_data
+            st.success(module6.get_success_summary())
             # Only display columns that exist
             cols_to_show = ['source_id', 'stellar_hab_score']
             if 'exo_hab_score' in st.session_state.pipeline_data.columns:
@@ -286,7 +298,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
             st.session_state.pipeline_step = 7
             st.rerun()
         else:
-            st.success("Results summary complete!")
+            module7 = ResultsSummaryModule()
+            module7.data = st.session_state.pipeline_data
+            st.success(module7.get_success_summary())
             
             # Display top discoveries
             st.subheader("Top Discoveries")
@@ -316,6 +330,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
             st.session_state.pipeline_step = 8
             st.rerun()
         else:
+            module8 = DataExportModule()
             st.success("Data export complete!")
             
             # Display export report
