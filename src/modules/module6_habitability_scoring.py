@@ -43,10 +43,13 @@ class HabitabilityScoringModule:
             (DataFrame with habitability scores, scoring report)
         """
         logger.info(f"Scoring habitability for {len(stellar_data)} stars")
+        logger.info(f"stellar_data type: {type(stellar_data)}")
+        logger.info(f"stellar_data columns: {stellar_data.columns.tolist() if isinstance(stellar_data, pd.DataFrame) else 'N/A'}")
         
         # Merge stellar and transit data if provided
         if transit_data is not None:
             df = pd.merge(stellar_data, transit_data, on='source_id', how='left')
+            logger.info(f"After merge, df columns: {df.columns.tolist()}")
         else:
             df = stellar_data.copy()
         
