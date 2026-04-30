@@ -76,7 +76,9 @@ if data_source == "Manual Entry":
         help="Enter one coordinate pair per line as 'RA, Dec' in decimal degrees. Lines starting with # are ignored.",
     )
 
-use_mock = st.sidebar.checkbox("Use mock data (Modules 2-8)", value=True, help="Use mock data for testing (no API calls)")
+# Modules 2-8 default to mock data while they remain gated behind the
+# members-only Run Full Pipeline. No user-facing toggle is needed.
+use_mock = True
 
 run_module1 = st.sidebar.button("▶️ Run Module 1", type="primary")
 run_pipeline = st.sidebar.button(
