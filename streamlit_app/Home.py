@@ -72,13 +72,16 @@ st.markdown(
         }
 
         /* Tier scoreboard metrics: smaller, grey, professional */
-        [data-testid="stMetricValue"] {
-            font-size: 1.6rem !important;
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricValue"] > div,
+        [data-testid="stMetricValue"] * {
+            font-size: 1.1rem !important;
             font-weight: 600 !important;
             color: #6b7280 !important;
         }
-        [data-testid="stMetricLabel"] {
-            font-size: 0.85rem !important;
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] * {
+            font-size: 0.8rem !important;
             color: #6b7280 !important;
         }
 
