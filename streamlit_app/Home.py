@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+from identifier_resolver import parse_manual_input
 
 # Add src to path for module imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -126,15 +127,28 @@ st.caption(
 input_left, input_right = st.columns([5, 1])
 with input_left:
     manual_text = st.text_area(
-        "Coordinates — *replace the example below with your own* (one per line: RA, Dec)",
-        value="150.0, 10.0\n200.0, -20.0\n250.0, 30.0",
-        height=150,
-        help="Enter one coordinate pair per line as 'RA, Dec' in decimal degrees. Lines starting with # are ignored.",
+        "Coordinates or identifiers — *replace the examples below with your own* (one per line)",
+        value=(
+            "150.0, 10.0\n"
+            "Gaia DR3 4271989156548409344\n"
+            "TIC 261136679\n"
+            "HD 209458\n"
+            "2MASS J05551028+2351124"
+        ),
+        height=170,
+        help=(
+            "One entry per line. Each line can be:\n"
+            "• 'RA, Dec' in decimal degrees (e.g. 150.0, 10.0)\n"
+            "• Gaia DR3 source_id (e.g. 'Gaia DR3 4271989156548409344' or just the number)\n"
+            "• TIC, KIC, EPIC, 2MASS, HD, HIP, TYC ID, or a common name\n"
+            "Identifiers are resolved to RA/Dec via Simbad (with a MAST TIC fallback).\n"
+            "Lines starting with # are ignored."
+        ),
     )
     st.caption(
-        "ℹ️ The three lines above are sample coordinates. **Delete them and paste in your "
-        "own RA/Dec pairs** before clicking *Run Module 1* — otherwise you'll be analyzing "
-        "the demo stars, not yours."
+        "ℹ️ The lines above are samples. **Delete them and paste in your own** "
+        "RA/Dec pairs *or* catalog IDs (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC) "
+        "before clicking *Run Module 1*."
     )
 with input_right:
     st.markdown("<div style='height: 1.85rem'></div>", unsafe_allow_html=True)
@@ -292,22 +306,28 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         df = df.head(n_stars).reset_index(drop=True)
                         module1.data = df
             else:  # Manual Entry
-                coordinates = []
-                for line in (manual_text or "").splitlines():
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    # Accept comma, whitespace, or tab separators
-                    parts = [p for p in line.replace(",", " ").split() if p]
-                    if len(parts) < 2:
-                        continue
-                    try:
-                        coordinates.append({"ra": float(parts[0]), "dec": float(parts[1])})
-                    except ValueError:
-                        continue
-                if not coordinates:
-                    st.error("No valid 'RA, Dec' pairs found in the manual entry box.")
+                with st.spinner("Resolving identifiers via Simbad / MAST …"):
+                    rows, unresolved = parse_manual_input(manual_text)
+                if unresolved:
+                    st.warning(
+                        "Could not resolve **" + str(len(unresolved)) + "** line(s): "
+                        + ", ".join(f"`{u}`" for u in unresolved[:6])
+                        + (" …" if len(unresolved) > 6 else "")
+                    )
+                if not rows:
+                    st.error(
+                        "No valid coordinates or recognizable identifiers found in the "
+                        "manual entry box. Each line must be 'RA, Dec' in decimal degrees "
+                        "or a catalog ID (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC)."
+                    )
                     st.stop()
+                resolved_count = sum(1 for r in rows if r.get("identifier"))
+                st.info(
+                    f"Parsed **{len(rows)}** entries — "
+                    f"{resolved_count} resolved from identifiers, "
+                    f"{len(rows) - resolved_count} numeric RA/Dec."
+                )
+                coordinates = [{"ra": r["ra"], "dec": r["dec"]} for r in rows]
                 df, validation = module1.load_manual_entry(coordinates)
             
             summary = module1.get_success_summary()
