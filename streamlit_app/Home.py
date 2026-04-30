@@ -611,6 +611,40 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 preview_cols = list(data.columns[:6])
             st.dataframe(data[preview_cols].head(20), use_container_width=True)
 
+            # ----- Live Gaia DR3 Verification report --------------------
+            verify_cols = [
+                'source_id', 'teff_gspphot', 'logg_gspphot',
+                'ruwe', 'bp_rp', 'tier',
+            ]
+            if all(c in data.columns for c in verify_cols):
+                st.markdown("### ✅ 100% Real, Live ESA Gaia DR3")
+                st.caption(
+                    "These are the raw values returned by the live ADQL query against "
+                    "`gaiadr3.gaia_source` joined with `gaiadr3.astrophysical_parameters`. "
+                    "The tier column is derived from these values by the GAIA Survival Test."
+                )
+                verify_df = data[verify_cols].copy()
+                verify_df = verify_df.rename(columns={
+                    'source_id':     'Gaia DR3 source_id',
+                    'teff_gspphot':  'Teff (K)',
+                    'logg_gspphot':  'log g',
+                    'ruwe':          'RUWE',
+                    'bp_rp':         'BP - RP',
+                    'tier':          'Tier',
+                })
+                fmt_df = verify_df.copy()
+                # Format numerics for readability without losing precision in CSV exports.
+                for col, ndp in [('Teff (K)', 1), ('log g', 2), ('RUWE', 2), ('BP - RP', 2)]:
+                    if col in fmt_df.columns:
+                        fmt_df[col] = pd.to_numeric(fmt_df[col], errors='coerce').round(ndp)
+                if 'Gaia DR3 source_id' in fmt_df.columns:
+                    fmt_df['Gaia DR3 source_id'] = fmt_df['Gaia DR3 source_id'].astype('Int64').astype(str)
+                st.dataframe(fmt_df, use_container_width=True, hide_index=True)
+                st.caption(
+                    f"**Live archive verdict:** "
+                    f"🥇 **{gold}** Certified · 🥈 **{silver}** Need Follow Up · 🥉 **{failed}** Failed."
+                )
+
             # Fire balloons exactly once per Run.
             if not st.session_state.get('m1_celebrated', False):
                 st.balloons()
