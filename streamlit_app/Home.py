@@ -69,6 +69,20 @@ st.markdown(
             color: #ffffff !important;
             box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.35) !important;
         }
+
+        /* File uploader Browse button -> dark green to match Run Module 1 */
+        [data-testid="stFileUploader"] button,
+        [data-testid="stFileUploaderDropzone"] button {
+            background-color: #1b5e20 !important;
+            border-color: #1b5e20 !important;
+            color: #ffffff !important;
+        }
+        [data-testid="stFileUploader"] button:hover,
+        [data-testid="stFileUploaderDropzone"] button:hover {
+            background-color: #2e7d32 !important;
+            border-color: #2e7d32 !important;
+            color: #ffffff !important;
+        }
     </style>
     """,
     unsafe_allow_html=True,
