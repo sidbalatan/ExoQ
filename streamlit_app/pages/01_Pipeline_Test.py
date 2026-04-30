@@ -61,11 +61,14 @@ if 'pipeline_step' not in st.session_state:
     st.session_state.pipeline_step = 0
 if 'pipeline_started' not in st.session_state:
     st.session_state.pipeline_started = False
+if 'summaries' not in st.session_state:
+    st.session_state.summaries = {}
 
 if run_pipeline:
     st.session_state.pipeline_step = 0
     st.session_state.pipeline_started = True
     st.session_state.pipeline_data = None
+    st.session_state.summaries = {}
     st.rerun()
 
 # Show instruction if pipeline hasn't started
@@ -93,14 +96,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 ]
                 df, validation = module1.load_manual_entry(coordinates)
             
-            st.success(module1.get_success_summary())
+            summary = module1.get_success_summary()
+            st.session_state.summaries['module1'] = summary
+            st.success(summary)
             st.dataframe(df[['source_id', 'ra', 'dec']].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 1
             st.rerun()
         else:
-            st.success("Module 1: Data Input | 1 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module1', 'Module 1: Data Input | 1 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id']
             if 'ra' in st.session_state.pipeline_data.columns:
@@ -123,14 +128,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
             module2 = StellarParameterModule()
             df, quality = module2.get_parameters(st.session_state.pipeline_data, use_mock=use_mock)
             
-            st.success(module2.get_success_summary())
+            summary = module2.get_success_summary()
+            st.session_state.summaries['module2'] = summary
+            st.success(summary)
             st.dataframe(df[['source_id', 'ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 2
             st.rerun()
         else:
-            st.success("Module 2: Stellar Parameters | 2 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module2', 'Module 2: Stellar Parameters | 2 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']:
@@ -152,14 +159,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
             module3 = ExoplanetCrossMatchModule()
             df, report = module3.cross_match(st.session_state.pipeline_data, use_mock=use_mock)
             
-            st.success(module3.get_success_summary())
+            summary = module3.get_success_summary()
+            st.session_state.summaries['module3'] = summary
+            st.success(summary)
             st.dataframe(df[['source_id', 'has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 3
             st.rerun()
         else:
-            st.success("Module 3: Exoplanet Cross-Match | 3 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module3', 'Module 3: Exoplanet Cross-Match | 3 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']:
@@ -181,14 +190,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
             module4 = TESSLightCurveModule()
             df, report = module4.retrieve_lightcurves(st.session_state.pipeline_data, use_mock=use_mock)
             
-            st.success(module4.get_success_summary())
+            summary = module4.get_success_summary()
+            st.session_state.summaries['module4'] = summary
+            st.success(summary)
             st.dataframe(df[['source_id', 'tess_available', 'sectors', 'data_points', 'cadence_minutes']].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 4
             st.rerun()
         else:
-            st.success("Module 4: TESS Light Curves | 4 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module4', 'Module 4: TESS Light Curves | 4 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['tess_available', 'sectors', 'data_points', 'cadence_minutes']:
@@ -210,14 +221,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
             module5 = TransitDetectionModule()
             df, report = module5.detect_transits(st.session_state.pipeline_data, use_mock=use_mock)
             
-            st.success(module5.get_success_summary())
+            summary = module5.get_success_summary()
+            st.session_state.summaries['module5'] = summary
+            st.success(summary)
             st.dataframe(df[['source_id', 'has_transit_candidate', 'transit_period', 'transit_snr']].head())
             
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 5
             st.rerun()
         else:
-            st.success("Module 5: Transit Detection | 5 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module5', 'Module 5: Transit Detection | 5 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id']
             for col in ['has_transit_candidate', 'transit_period', 'transit_snr']:
@@ -239,7 +252,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             module6 = HabitabilityScoringModule()
             df, report = module6.score_habitability(st.session_state.pipeline_data, st.session_state.pipeline_data)
             
-            st.success(module6.get_success_summary())
+            summary = module6.get_success_summary()
+            st.session_state.summaries['module6'] = summary
+            st.success(summary)
             # Only display columns that exist
             cols_to_show = ['source_id', 'stellar_hab_score']
             if 'exo_hab_score' in df.columns:
@@ -252,7 +267,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
             st.session_state.pipeline_step = 6
             st.rerun()
         else:
-            st.success("Module 6: Habitability Scoring | 6 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module6', 'Module 6: Habitability Scoring | 6 of 8 Complete!'))
             # Only display columns that exist
             cols_to_show = ['source_id', 'stellar_hab_score']
             if 'exo_hab_score' in st.session_state.pipeline_data.columns:
@@ -275,7 +290,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
             module7 = ResultsSummaryModule()
             df, report = module7.generate_summary(st.session_state.pipeline_data)
             
-            st.success(module7.get_success_summary())
+            summary = module7.get_success_summary()
+            st.session_state.summaries['module7'] = summary
+            st.success(summary)
             
             # Display top discoveries
             st.subheader("Top Discoveries")
@@ -286,7 +303,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
             st.session_state.pipeline_step = 7
             st.rerun()
         else:
-            st.success("Module 7: Results Summary | 7 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module7', 'Module 7: Results Summary | 7 of 8 Complete!'))
             
             # Display top discoveries
             st.subheader("Top Discoveries")
@@ -307,6 +324,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
             module8 = DataExportModule()
             report, summary = module8.export_data(st.session_state.pipeline_data, formats=['csv', 'json'])
             
+            st.session_state.summaries['module8'] = summary
             st.success(summary)
             
             # Display export report
@@ -316,7 +334,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
             st.session_state.pipeline_step = 8
             st.rerun()
         else:
-            st.success("Module 8: Data Export | 8 of 8 Complete!")
+            st.success(st.session_state.summaries.get('module8', 'Module 8: Data Export | 8 of 8 Complete!'))
             
             # Display export report
             st.subheader("Export Report")
@@ -334,4 +352,5 @@ if st.session_state.pipeline_step > 0 or st.session_state.pipeline_started:
         st.session_state.pipeline_step = 0
         st.session_state.pipeline_data = None
         st.session_state.pipeline_started = False
+        st.session_state.summaries = {}
         st.rerun()
