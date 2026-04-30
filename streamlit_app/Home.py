@@ -165,6 +165,32 @@ with input_left:
         "RA/Dec pairs *or* catalog IDs (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC) "
         "before clicking *Run Module 1*."
     )
+    if st.button("📋 Validate & Preview Identifiers", key="m1_validate_manual"):
+        st.session_state.m1_validate_manual = True
+    if st.session_state.get("m1_validate_manual"):
+        with st.spinner("Resolving identifiers via Simbad / MAST …"):
+            preview_rows, preview_unresolved = parse_manual_input(manual_text)
+        if preview_rows:
+            n_resolved = sum(1 for r in preview_rows if r.get("identifier"))
+            n_numeric = len(preview_rows) - n_resolved
+            st.success(
+                f"✅ {len(preview_rows)} entries ready — "
+                f"{n_resolved} resolved from identifiers, {n_numeric} numeric RA/Dec."
+            )
+            st.dataframe(
+                pd.DataFrame(preview_rows)[["identifier", "resolved_label", "ra", "dec"]]
+                  .rename(columns={"resolved_label": "resolved as"}),
+                use_container_width=True,
+                height=min(35 + 35 * len(preview_rows), 250),
+            )
+        if preview_unresolved:
+            st.warning(
+                "Could not resolve **" + str(len(preview_unresolved)) + "** line(s): "
+                + ", ".join(f"`{u}`" for u in preview_unresolved[:6])
+                + (" …" if len(preview_unresolved) > 6 else "")
+            )
+        if not preview_rows and not preview_unresolved:
+            st.info("Nothing to preview yet — paste some entries into the textarea above.")
 with input_right:
     uploaded_file = st.file_uploader(
         "📂 Upload CSV (overrides manual entry)",
