@@ -37,13 +37,13 @@ with st.popover("☰ Main Menu", use_container_width=False):
     st.markdown("#### 📚 Modules")
     st.markdown(
         "**▶ Module 1 of 8 - Data Input**  \n"
-        "🔒 Module 2 — Stellar Parameters  \n"
-        "🔒 Module 3 — Exoplanet Cross-Match  \n"
-        "🔒 Module 4 — TESS Light Curves  \n"
-        "🔒 Module 5 — Transit Detection  \n"
-        "🔒 Module 6 — Habitability Scoring  \n"
-        "🔒 Module 7 — Results Summary  \n"
-        "🔒 Module 8 — Data Export"
+        "🔒 Module 2 of 8 - Stellar Parameters  \n"
+        "🔒 Module 3 of 8 - Exoplanet Cross-Match  \n"
+        "🔒 Module 4 of 8 - TESS Light Curves  \n"
+        "🔒 Module 5 of 8 - Transit Detection  \n"
+        "🔒 Module 6 of 8 - Habitability Scoring  \n"
+        "🔒 Module 7 of 8 - Results Summary  \n"
+        "🔒 Module 8 of 8 - Data Export"
     )
     st.markdown("---")
     run_pipeline = st.button(
@@ -198,7 +198,7 @@ if not st.session_state.pipeline_started:
 # Only run modules if pipeline has been started
 if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
     # Module 1: Data Input
-    with st.expander("📥 Module 1: Data Input", expanded=st.session_state.pipeline_step == 0):
+    with st.expander("📥 Module 1 of 8 - Data Input", expanded=st.session_state.pipeline_step == 0):
         if st.session_state.pipeline_step == 0:
             st.info("Loading coordinates...")
             
@@ -274,7 +274,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 1:
     # Module 2: Stellar Parameters
-    with st.expander("🌟 Module 2: Stellar Parameters", expanded=st.session_state.pipeline_step == 1):
+    with st.expander("🌟 Module 2 of 8 - Stellar Parameters", expanded=st.session_state.pipeline_step == 1):
         if st.session_state.pipeline_step == 1:
             st.info("Retrieving stellar parameters from Gaia DR3...")
             
@@ -305,7 +305,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 2:
     # Module 3: Exoplanet Cross-Match
-    with st.expander("🪐 Module 3: Exoplanet Cross-Match", expanded=st.session_state.pipeline_step == 2):
+    with st.expander("🪐 Module 3 of 8 - Exoplanet Cross-Match", expanded=st.session_state.pipeline_step == 2):
         if st.session_state.pipeline_step == 2:
             st.info("Cross-matching with NASA Exoplanet Archive...")
             
@@ -336,7 +336,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 3:
     # Module 4: TESS Light Curves
-    with st.expander("📈 Module 4: TESS Light Curves", expanded=st.session_state.pipeline_step == 3):
+    with st.expander("📈 Module 4 of 8 - TESS Light Curves", expanded=st.session_state.pipeline_step == 3):
         if st.session_state.pipeline_step == 3:
             st.info("Retrieving TESS light curves from MAST API...")
             
@@ -367,7 +367,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 4:
     # Module 5: Transit Detection
-    with st.expander("🎯 Module 5: Transit Detection", expanded=st.session_state.pipeline_step == 4):
+    with st.expander("🎯 Module 5 of 8 - Transit Detection", expanded=st.session_state.pipeline_step == 4):
         if st.session_state.pipeline_step == 4:
             st.info("Detecting transits using BLS periodogram...")
             
@@ -398,7 +398,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 5:
     # Module 6: Habitability Scoring
-    with st.expander("💧 Module 6: Habitability Scoring", expanded=st.session_state.pipeline_step == 5):
+    with st.expander("💧 Module 6 of 8 - Habitability Scoring", expanded=st.session_state.pipeline_step == 5):
         if st.session_state.pipeline_step == 5:
             st.info("Scoring habitability of stars and exoplanets...")
             
@@ -436,7 +436,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 6:
     # Module 7: Results Summary
-    with st.expander("🏆 Module 7: Results Summary", expanded=st.session_state.pipeline_step == 6):
+    with st.expander("🏆 Module 7 of 8 - Results Summary", expanded=st.session_state.pipeline_step == 6):
         if st.session_state.pipeline_step == 6:
             st.info("Generating comprehensive results summary...")
             
@@ -470,7 +470,7 @@ if st.session_state.pipeline_started and not st.session_state.m1_only and st.ses
 
 if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 7:
     # Module 8: Data Export
-    with st.expander("💾 Module 8: Data Export", expanded=st.session_state.pipeline_step == 7):
+    with st.expander("💾 Module 8 of 8 - Data Export", expanded=st.session_state.pipeline_step == 7):
         if st.session_state.pipeline_step == 7:
             st.info("Exporting results in multiple formats...")
             
