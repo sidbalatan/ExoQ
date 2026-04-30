@@ -71,6 +71,17 @@ st.markdown(
             box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.35) !important;
         }
 
+        /* Tier scoreboard metrics: smaller, grey, professional */
+        [data-testid="stMetricValue"] {
+            font-size: 1.6rem !important;
+            font-weight: 600 !important;
+            color: #6b7280 !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 0.85rem !important;
+            color: #6b7280 !important;
+        }
+
         /* File uploader Browse button -> dark green to match Run Module 1 */
         [data-testid="stFileUploader"] button,
         [data-testid="stFileUploaderDropzone"] button {
