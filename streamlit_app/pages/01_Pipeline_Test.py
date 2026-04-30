@@ -23,12 +23,12 @@ from modules.module7_results_summary import ResultsSummaryModule
 from modules.module8_data_export import DataExportModule
 
 st.set_page_config(
-    page_title="Pipeline Test - ExoQ",
-    page_icon="🔬",
+    page_title="ExoQ: Exoplanet Quest for Earth 2.0",
+    page_icon="🌍",
     layout="wide"
 )
 
-st.title("🔬 ExoQ Pipeline Test")
+st.title("🌍 ExoQ: Exoplanet Quest for Earth 2.0")
 st.markdown("---")
 
 # Sidebar controls
