@@ -51,13 +51,22 @@ st.sidebar.header("Pipeline Controls")
 n_stars = st.sidebar.slider("Number of stars", min_value=5, max_value=363, value=10, step=5)
 data_source = st.sidebar.selectbox(
     "Data source",
-    ["Real K Dwarf Catalog", "Virgin List", "Vetted List", "Manual Entry"],
-    help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV (Spitzer + Gaia DR3 + 2MASS).",
+    ["Real K Dwarf Catalog", "Upload CSV", "Virgin List", "Vetted List", "Manual Entry"],
+    help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV. 'Upload CSV' lets you upload your own file.",
 )
 random_sample = st.sidebar.checkbox(
     "Random sample from catalog", value=True,
     help="Only used for 'Real K Dwarf Catalog'. Off = take first N rows.",
 )
+
+uploaded_file = None
+if data_source == "Upload CSV":
+    uploaded_file = st.sidebar.file_uploader(
+        "Upload CSV file",
+        type=["csv"],
+        help="CSV must contain at least 'ra' and 'dec' columns. Validated K Dwarf catalogs (with Teff, logg, RUWE, DR3Name, etc.) are auto-recognized.",
+    )
+
 use_mock = st.sidebar.checkbox("Use mock data (Modules 2-8)", value=True, help="Use mock data for testing (no API calls)")
 
 run_pipeline = st.sidebar.button("🚀 Run Full Pipeline", type="primary")
@@ -97,6 +106,29 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     n_stars=n_stars,
                     random_sample=random_sample,
                 )
+            elif data_source == "Upload CSV":
+                if uploaded_file is None:
+                    st.error("Please upload a CSV file in the sidebar before running the pipeline.")
+                    st.stop()
+                # Persist the upload to a temp file so the loader can read it by path.
+                import tempfile
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+                    tmp.write(uploaded_file.getvalue())
+                    tmp_path = tmp.name
+                # If the uploaded file looks like a validated K Dwarf catalog, use
+                # the rich catalog loader; otherwise fall back to generic load_csv.
+                head = pd.read_csv(tmp_path, nrows=1)
+                if "DR3Name" in head.columns or "validation_tier" in head.columns:
+                    df, validation = module1.load_real_kdwarf_catalog(
+                        file_path=tmp_path,
+                        n_stars=n_stars,
+                        random_sample=random_sample,
+                    )
+                else:
+                    df, validation = module1.load_csv(tmp_path)
+                    if n_stars and len(df) > n_stars:
+                        df = df.head(n_stars).reset_index(drop=True)
+                        module1.data = df
             elif data_source == "Virgin List":
                 df, validation = module1.load_from_virgin_list(n_stars=n_stars)
             elif data_source == "Vetted List":
