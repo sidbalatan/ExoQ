@@ -318,7 +318,7 @@ if not st.session_state.pipeline_started:
 # Only run modules if pipeline has been started
 if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
     # Module 1: Data Input
-    with st.expander("📥 Module 1 of 8 - Data Input", expanded=st.session_state.pipeline_step == 0):
+    with st.expander("📥 Module 1 of 8 - Data Input", expanded=True):
         if st.session_state.pipeline_step == 0:
             st.info("Loading coordinates...")
             
@@ -370,26 +370,73 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     f"{len(rows) - resolved_count} numeric RA/Dec."
                 )
                 coordinates = [{"ra": r["ra"], "dec": r["dec"]} for r in rows]
+                input_count = len(coordinates)
                 df, validation = module1.load_manual_entry(coordinates)
-            
+
+            # Capture the survivor headline numbers for the celebration block.
+            survivor_count = int(len(df))
+            if data_source == "Upload CSV" and 'preview_df' in dir() and preview_df is not None:
+                # For CSV the effective input is the slider-capped row count.
+                input_count = min(int(preview_df.shape[0]), int(n_stars))
+            elif data_source != "Upload CSV":
+                # Manual entry: input_count was set just above.
+                pass
+            else:
+                input_count = survivor_count
+            st.session_state.m1_input_count = input_count
+            st.session_state.m1_survivor_count = survivor_count
+            st.session_state.m1_celebrated = False  # trigger balloons on next render
+
             summary = module1.get_success_summary()
             st.session_state.summaries['module1'] = summary
-            st.success(summary)
-            preview_cols = [c for c in ['source_id', 'gaia_dr3_name', 'ra', 'dec', 'teff_gspphot', 'k_subtype', 'validation_tier'] if c in df.columns]
-            st.dataframe(df[preview_cols].head())
-            
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 1
             st.rerun()
         else:
+            survivors = int(st.session_state.get('m1_survivor_count', len(st.session_state.pipeline_data)))
+            inputs = int(st.session_state.get('m1_input_count', survivors))
+            ejected = max(inputs - survivors, 0)
+
+            # 🎉 Celebration banner -------------------------------------------------
+            if ejected > 0:
+                st.markdown(
+                    f"### 🎉 Congratulations! **{survivors} of {inputs}** stars survived the Gaia DR3 Survival Test."
+                )
+                st.caption(
+                    f"🔬 {ejected} did not meet the K-Dwarf criteria and were ejected. "
+                    f"The {survivors} **🌱 Survivors** below are ready for Modules 2–8."
+                )
+            else:
+                st.markdown(
+                    f"### 🎉 Congratulations! All **{survivors}** stars cleared the gauntlet — meet your **🌱 Survivors**!"
+                )
+                st.caption("They are now ready to continue the journey toward Earth 2.0.")
+
+            # Validation-tier breakdown if available
+            data = st.session_state.pipeline_data
+            if 'validation_tier' in data.columns:
+                tier_counts = data['validation_tier'].value_counts()
+                tcol1, tcol2, tcol3 = st.columns(3)
+                tcol1.metric("🥇 Gold",   int(tier_counts.get('Gold', 0)))
+                tcol2.metric("🥈 Silver", int(tier_counts.get('Silver', 0)))
+                tcol3.metric("🥉 Bronze", int(tier_counts.get('Bronze', 0)))
+
             st.success(st.session_state.summaries.get('module1', 'Module 1: Data Input | 1 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id']
-            if 'ra' in st.session_state.pipeline_data.columns:
-                cols_to_show.append('ra')
-            if 'dec' in st.session_state.pipeline_data.columns:
-                cols_to_show.append('dec')
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
+
+            # Preview the survivor table (richer column set when available).
+            preview_cols = [c for c in [
+                'source_id', 'gaia_dr3_name', 'ra', 'dec',
+                'teff_gspphot', 'logg_gspphot', 'ruwe',
+                'k_subtype', 'validation_tier'
+            ] if c in data.columns]
+            if not preview_cols:
+                preview_cols = list(data.columns[:6])
+            st.dataframe(data[preview_cols].head(20), use_container_width=True)
+
+            # Fire balloons exactly once per Run.
+            if not st.session_state.get('m1_celebrated', False):
+                st.balloons()
+                st.session_state.m1_celebrated = True
         
         if st.session_state.pipeline_step == 1 and not st.session_state.m1_only:
             if st.button("Continue to Module 2", key="m1_continue"):
