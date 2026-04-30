@@ -269,10 +269,10 @@ with st.expander("Read more"):
 
     st.markdown(
         "##### 🏷️ Validation tiers\n"
-        "Each Survivor is stamped with a confidence tier based on how cleanly it cleared the gauntlet:\n"
-        "- 🥇 **Gold** — passed every cut with margin to spare\n"
-        "- 🥈 **Silver** — passed with minor borderline values\n"
-        "- 🥉 **Bronze** — passed but sits near a threshold (worth a second look)"
+        "Each star is stamped with a confidence tier based on how cleanly it cleared the gauntlet:\n"
+        "- 🥇 **Gaia Certified K Dwarf** — passed every cut with margin to spare\n"
+        "- 🥈 **Need Follow Up** — passed with minor borderline values; worth a second look\n"
+        "- 🥉 **Failed** — did not meet the K-Dwarf criteria"
     )
     st.caption(
         "When this run finishes, you'll see how many of your input stars made it through the gauntlet — "
@@ -417,9 +417,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             if 'validation_tier' in data.columns:
                 tier_counts = data['validation_tier'].value_counts()
                 tcol1, tcol2, tcol3 = st.columns(3)
-                tcol1.metric("🥇 Gold",   int(tier_counts.get('Gold', 0)))
-                tcol2.metric("🥈 Silver", int(tier_counts.get('Silver', 0)))
-                tcol3.metric("🥉 Bronze", int(tier_counts.get('Bronze', 0)))
+                tcol1.metric("🥇 Gaia Certified K Dwarf", int(tier_counts.get('Gold', 0)))
+                tcol2.metric("🥈 Need Follow Up",         int(tier_counts.get('Silver', 0)))
+                tcol3.metric("🥉 Failed",                  int(tier_counts.get('Bronze', 0)))
 
             st.success(st.session_state.summaries.get('module1', 'Module 1: Data Input | 1 of 8 Complete!'))
 
