@@ -176,19 +176,24 @@ class ResultsSummaryModule:
         for i, discovery in enumerate(report['top_discoveries'][:3], 1):
             discoveries_text += f"{i}. TIC {discovery['source_id']} - {discovery['description']}\n"
         
+        # Calculate pass rate
+        passed_quality = report.get('n_stars_passed_quality', report['n_total_stars'])
+        pass_rate = (passed_quality / report['n_total_stars'] * 100) if report['n_total_stars'] > 0 else 100
+        
         summary = f"""
 🏆 ExoQ Pipeline Complete! Congratulations!
 
 🎉 You've successfully analyzed {report['n_total_stars']} K Dwarf stars!
 
 Key Achievements:
-✅ {report.get('n_stars_passed_quality', report['n_total_stars'])} stars passed all quality filters
+✅ {passed_quality} stars passed all quality filters ({pass_rate:.1f}% pass rate)
 ✅ {report.get('n_transit_candidates', 0)} exoplanet candidates detected
 ✅ {report.get('n_highly_habitable', 0)} highly habitable targets identified
 
 Top Discoveries:
 {discoveries_text}
 
+🎯 {report['n_total_stars']} stars moving to Module 8: Data Export
 Your contributions help humanity's quest for Earth 2.0! 🌍🚀
 
 Download your results using Module 8: Data Export

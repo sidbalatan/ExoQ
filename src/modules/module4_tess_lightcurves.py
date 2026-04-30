@@ -161,6 +161,8 @@ class TESSLightCurveModule:
         df = self.data
         report = self.download_report
         
+        pass_rate = (report['n_available'] / report['n_total'] * 100) if report['n_total'] > 0 else 100
+        
         summary = f"""
 📈 TESS Light Curves Retrieved!
 
@@ -172,7 +174,9 @@ Light Curve Summary:
 - Sectors covered: {report['sectors_covered']}
 - Average cadence: {report['average_cadence_minutes']:.0f} minutes
 - Data points per star: {report['total_data_points'] // len(df):,}
+- Pass rate: {pass_rate:.1f}% ({report['n_available']}/{report['n_total']} stars with TESS data)
 
+🎯 {report['n_available']} stars moving to Module 5: Transit Detection
 You're ready to hunt for transits! 🔭
 """
         return summary.strip()

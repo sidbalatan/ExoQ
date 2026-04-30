@@ -299,6 +299,9 @@ class DataInputModule:
         ra_min, ra_max = df['ra'].min(), df['ra'].max()
         dec_min, dec_max = df['dec'].min(), df['dec'].max()
         
+        # Calculate pass rate
+        pass_rate = (validation['valid_stars'] / validation['total_stars'] * 100) if validation['total_stars'] > 0 else 0
+        
         summary = f"""
 🎉 Data Input Complete!
 
@@ -310,8 +313,9 @@ Input Summary:
 - Total stars: {len(df)}
 - Source: {self.source}
 - Coordinate range: RA {ra_min:.2f}-{ra_max:.2f}, Dec {dec_min:.2f}-{dec_max:.2f}
-- Data validation: {validation['valid_stars']}/{validation['total_stars']} valid
+- Data validation: {validation['valid_stars']}/{validation['total_stars']} valid ({pass_rate:.1f}% pass rate)
 
+🎯 {validation['valid_stars']} stars moving to Module 2: Stellar Parameters
 You're ready to discover exoplanets! 🚀
 """
         return summary.strip()

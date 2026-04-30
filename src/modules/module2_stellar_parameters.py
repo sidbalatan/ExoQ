@@ -198,6 +198,7 @@ class StellarParameterModule:
         
         teff_min, teff_max = report['teff_range']
         logg_min, logg_max = report['logg_range']
+        pass_rate = report['pass_rate'] * 100
         
         summary = f"""
 🌟 Stellar Parameters Retrieved!
@@ -210,7 +211,9 @@ Stellar Summary:
 - Temperature range: {teff_min:.0f}-{teff_max:.0f} K (K Dwarf range ✓)
 - Surface gravity: {logg_min:.2f}-{logg_max:.2f} dex (main sequence ✓)
 - Data quality: Excellent (ruwe < 1.4, parallax S/N > 10)
+- Pass rate: {pass_rate:.1f}% ({report['total_passed']}/{report['n_total']} stars)
 
+🎯 {report['total_passed']} stars moving to Module 3: Exoplanet Cross-Match
 Your K Dwarf sample is scientifically robust! 🎯
 """
         return summary.strip()

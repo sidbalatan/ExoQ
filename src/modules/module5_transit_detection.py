@@ -238,6 +238,8 @@ class TransitDetectionModule:
         else:
             best_info = "No candidates passed thresholds"
         
+        pass_rate = (report['n_passed'] / report['n_total'] * 100) if report['n_total'] > 0 else 0
+        
         summary = f"""
 🎯 Transit Detection Complete!
 
@@ -249,8 +251,10 @@ Detection Summary:
 - Candidates with S/N > 6: {report['n_passed']}
 - Average period: {report['average_period']:.1f} days
 - Average depth: {report['average_depth']*100:.2f}%
+- Pass rate: {pass_rate:.1f}% ({report['n_passed']}/{report['n_total']} stars)
 - {best_info}
 
+🎯 {report['n_passed']} stars moving to Module 6: Habitability Scoring
 You've found potential exoplanets! 🌍
 """
         return summary.strip()

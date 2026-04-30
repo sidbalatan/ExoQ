@@ -187,6 +187,7 @@ class ExoplanetCrossMatchModule:
         if self.data is None:
             return "No data processed yet."
         
+        df = self.data
         report = self.crossmatch_report
         
         summary = f"""
@@ -200,7 +201,9 @@ Cross-Match Summary:
 - Stars with exoplanets: {report['n_exoplanet_hosts']} ({report['fraction_with_exoplanets']*100:.1f}%)
 - Virgin stars: {report['n_virgin']} ({report['fraction_virgin']*100:.1f}%)
 - Average separation: {report['average_separation']:.2f} arcsec
+- Pass rate: 100% (all {report['n_total']} stars processed)
 
+🎯 {report['n_total']} stars moving to Module 4: TESS Light Curves
 You have both vetting candidates and discovery targets! 🎉
 """
         return summary.strip()

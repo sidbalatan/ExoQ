@@ -315,6 +315,8 @@ class HabitabilityScoringModule:
         df = self.data
         report = self.scoring_report
         
+        pass_rate = (report['n_highly_habitable'] / report['n_total'] * 100) if report['n_total'] > 0 else 0
+        
         summary = f"""
 💧 Habitability Scoring Complete!
 
@@ -326,7 +328,9 @@ Habitability Summary:
 - Best host star: TIC {report['best_star_id']} (score = {report['best_star_score']:.2f})
 - Most Earth-like planet: ESI = {report['max_esi']:.2f}
 - Habitable zone candidates: {report['n_habitable_exo']}
+- Pass rate: {pass_rate:.1f}% ({report['n_highly_habitable']}/{report['n_total']} stars highly habitable)
 
+🎯 {report['n_total']} stars moving to Module 7: Results Summary
 You've found potential Earth 2.0 candidates! 🌏
 """
         return summary.strip()
