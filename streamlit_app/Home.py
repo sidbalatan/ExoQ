@@ -127,7 +127,7 @@ st.caption(
 input_left, input_right = st.columns([5, 1])
 with input_left:
     manual_text = st.text_area(
-        "Coordinates or identifiers — *replace the examples below with your own* (one per line)",
+        "Coordinates or Identifiers",
         value=(
             "150.0, 10.0\n"
             "Gaia DR3 4271989156548409344\n"
@@ -175,7 +175,49 @@ random_sample = True
 # Auto-pick the active data source: a non-empty file uploader wins over manual text.
 data_source = "Upload CSV" if uploaded_file is not None else "Manual Entry"
 if uploaded_file is not None:
-    st.caption(f"✅ Using uploaded CSV: **{uploaded_file.name}** (manual text ignored).")
+    # Peek at the upload so the user sees the table before pressing Run.
+    try:
+        uploaded_file.seek(0)
+        preview_df = pd.read_csv(uploaded_file)
+        uploaded_file.seek(0)  # rewind so the run handler can re-read it later
+    except Exception as exc:
+        preview_df = None
+        st.error(f"❌ Could not parse `{uploaded_file.name}` as a CSV: {exc}")
+
+    if preview_df is not None:
+        rows, cols = preview_df.shape
+        has_ra = any(c.lower() == "ra" for c in preview_df.columns)
+        has_dec = any(c.lower() == "dec" for c in preview_df.columns)
+        validated_markers = [
+            c for c in preview_df.columns
+            if c in ("DR3Name", "Teff", "logg", "RUWE", "validation_tier", "k_subtype")
+        ]
+
+        if has_ra and has_dec:
+            st.success(
+                f"✅ Loaded **{uploaded_file.name}** — **{rows:,}** rows × **{cols}** columns. "
+                f"Required `ra` and `dec` columns detected. **Ready to run.**"
+            )
+        else:
+            st.error(
+                f"⚠️ Loaded **{uploaded_file.name}** ({rows:,}×{cols}) but the required "
+                f"`ra` and/or `dec` columns are missing. Module 1 will fail until those are present."
+            )
+
+        if validated_markers:
+            st.caption(
+                "🔬 Validated K Dwarf catalog detected — extra columns recognized: "
+                + ", ".join(f"`{c}`" for c in validated_markers)
+            )
+
+        with st.expander(f"📋 Preview — first {min(20, rows)} rows", expanded=True):
+            st.dataframe(preview_df.head(20), use_container_width=True)
+
+        st.caption(
+            f"Manual text above is ignored while a CSV is loaded. "
+            f"At most **{n_stars}** of the **{rows:,}** rows will feed the pipeline "
+            f"(adjust with the slider above)."
+        )
 
 # Modules 2-8 default to mock data while they remain gated behind the
 # members-only Run Full Pipeline. No user-facing toggle is needed.
