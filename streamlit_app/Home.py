@@ -78,9 +78,22 @@ with st.expander("Read more"):
 col_left, col_right = st.columns([2, 1])
 with col_left:
     data_source = st.selectbox(
-        "Data source",
+        "Data source — what your stars are identified by",
         ["Upload CSV", "Manual Entry"],
-        help="'Upload CSV' loads coordinates from your file. 'Manual Entry' lets you type RA/Dec pairs directly.",
+        help=(
+            "Accepted identifiers per row:\n"
+            "• RA / Dec (decimal degrees) — required minimum\n"
+            "• Gaia DR3 source_id or DR3Name (e.g. 'Gaia DR3 4271989156548409344')\n"
+            "• TIC ID (TESS Input Catalog)\n"
+            "• KIC / EPIC IDs (Kepler / K2)\n"
+            "• 2MASS / Spitzer object IDs\n\n"
+            "'Upload CSV' = a file with these columns. 'Manual Entry' = type RA/Dec pairs by hand."
+        ),
+    )
+    st.caption(
+        "Accepts: **RA / Dec** *(required)*, **Gaia DR3 IDs**, **TIC IDs**, "
+        "**KIC / EPIC IDs**, **2MASS / Spitzer IDs**. Extra columns "
+        "(Teff, logg, RUWE, photometry, …) are auto-recognized."
     )
 with col_right:
     n_stars = st.slider(
