@@ -188,7 +188,10 @@ with input_left:
                 height=min(35 + 35 * len(preview_rows), 250),
             )
             st.markdown(
-                "### 👇 CLICK THE RUN GAIA SURVIVAL TEST BUTTON LOCATED BELOW"
+                "<p style='font-size: 0.85rem; font-weight: 600; margin: 0.25rem 0;'>"
+                "👇 CLICK THE RUN GAIA SURVIVAL TEST BUTTON LOCATED BELOW"
+                "</p>",
+                unsafe_allow_html=True,
             )
         if preview_unresolved:
             st.warning(
