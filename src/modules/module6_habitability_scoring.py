@@ -92,7 +92,10 @@ class HabitabilityScoringModule:
         
         # Check if required columns exist
         required_cols = ['teff_gspphot', 'logg_gspphot', 'ruwe']
-        missing_cols = [col for col in required_cols if col not in df.columns]
+        missing_cols = []
+        for col in required_cols:
+            if col not in df.columns:
+                missing_cols.append(col)
         
         if missing_cols:
             logger.warning(f"Missing columns for stellar habitability: {missing_cols}")
