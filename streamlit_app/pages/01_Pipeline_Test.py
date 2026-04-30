@@ -61,11 +61,15 @@ col_left, col_right = st.columns([2, 1])
 with col_left:
     data_source = st.selectbox(
         "Data source",
-        ["Real K Dwarf Catalog", "Upload CSV", "Virgin List", "Vetted List", "Manual Entry"],
-        help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV. 'Upload CSV' lets you upload your own file.",
+        ["Upload CSV", "Manual Entry"],
+        help="'Upload CSV' loads coordinates from your file. 'Manual Entry' lets you type RA/Dec pairs directly.",
     )
 with col_right:
-    n_stars = st.slider("Number of stars", min_value=5, max_value=363, value=10, step=5)
+    n_stars = st.slider(
+        "Max stars to load",
+        min_value=5, max_value=500, value=10, step=5,
+        help="Caps the number of rows loaded from the uploaded CSV. Ignored for Manual Entry.",
+    )
 
 # Default catalog sampling to random; user-facing toggle removed.
 random_sample = True
@@ -147,12 +151,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             
             module1 = DataInputModule()
             
-            if data_source == "Real K Dwarf Catalog":
-                df, validation = module1.load_real_kdwarf_catalog(
-                    n_stars=n_stars,
-                    random_sample=random_sample,
-                )
-            elif data_source == "Upload CSV":
+            if data_source == "Upload CSV":
                 if uploaded_file is None:
                     st.error("Please upload a CSV file above before running Module 1.")
                     st.stop()
@@ -175,10 +174,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     if n_stars and len(df) > n_stars:
                         df = df.head(n_stars).reset_index(drop=True)
                         module1.data = df
-            elif data_source == "Virgin List":
-                df, validation = module1.load_from_virgin_list(n_stars=n_stars)
-            elif data_source == "Vetted List":
-                df, validation = module1.load_from_vetted_list(n_stars=n_stars)
             else:  # Manual Entry
                 coordinates = []
                 for line in (manual_text or "").splitlines():
