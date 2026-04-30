@@ -12,7 +12,7 @@ import sys
 import os
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
-from workspace import current_user, sign_in_widget, get_store
+from workspace import auth_strip, current_user, sign_in_widget, get_store
 from workspace.store import RunMeta, RunRecord, new_run_id
 
 # Add src to path for module imports
@@ -44,6 +44,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Compact Sign in / Sign up strip, sitting on the line just above the rule.
+auth_strip()
 st.markdown("---")
 
 # Style primary buttons (Run Module 1) in dark green.

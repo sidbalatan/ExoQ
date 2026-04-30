@@ -87,6 +87,8 @@ class WorkspaceStore(Protocol):
     def list_runs(self, user_id: str) -> List[RunMeta]: ...
     def load_run(self, user_id: str, run_id: str) -> RunRecord: ...
     def delete_run(self, user_id: str, run_id: str) -> None: ...
+    def user_exists(self, user_id: str) -> bool: ...
+    def create_user(self, user_id: str, display_name: str = "") -> None: ...
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +226,47 @@ class LocalFileStore:
         run_dir = self._run_dir(user_id, run_id)
         if run_dir.exists():
             shutil.rmtree(run_dir)
+
+    # -- account helpers ---------------------------------------------------
+    def _profile_path(self, user_id: str) -> Path:
+        uid = normalize_user_id(user_id)
+        return self.root / uid / "profile.json"
+
+    def user_exists(self, user_id: str) -> bool:
+        """A user 'exists' once we've written a profile marker for them."""
+        uid = normalize_user_id(user_id)
+        if not uid:
+            return False
+        return (self.root / uid / "profile.json").exists()
+
+    def create_user(self, user_id: str, display_name: str = "") -> None:
+        """Create the profile marker for a new account.
+
+        Idempotent: writing twice keeps the original ``created_at`` so the
+        caller can guard with :meth:`user_exists` to decide whether the
+        account is fresh.
+        """
+        uid = normalize_user_id(user_id)
+        if not uid:
+            raise ValueError("user_id must be non-empty after normalization")
+        d = self._user_dir(uid)
+        prof = d / "profile.json"
+        if prof.exists():
+            try:
+                existing = json.loads(prof.read_text(encoding="utf-8"))
+            except Exception:
+                existing = {}
+        else:
+            existing = {
+                "user_id": uid,
+                "display_name": display_name or uid,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "schema_version": SCHEMA_VERSION,
+            }
+        # Allow display_name updates without resetting created_at.
+        if display_name:
+            existing["display_name"] = display_name
+        prof.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
