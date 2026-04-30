@@ -42,6 +42,37 @@ st.markdown(
 )
 st.markdown("---")
 
+# Style primary buttons (Run Module 1) in dark green.
+st.markdown(
+    """
+    <style>
+        button[kind="primary"],
+        [data-testid="baseButton-primary"],
+        [data-testid="stBaseButton-primary"] {
+            background-color: #1b5e20 !important;
+            border-color: #1b5e20 !important;
+            color: #ffffff !important;
+        }
+        button[kind="primary"]:hover,
+        [data-testid="baseButton-primary"]:hover,
+        [data-testid="stBaseButton-primary"]:hover {
+            background-color: #2e7d32 !important;
+            border-color: #2e7d32 !important;
+            color: #ffffff !important;
+        }
+        button[kind="primary"]:focus:not(:active),
+        [data-testid="baseButton-primary"]:focus:not(:active),
+        [data-testid="stBaseButton-primary"]:focus:not(:active) {
+            background-color: #1b5e20 !important;
+            border-color: #1b5e20 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.35) !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # --- Main Menu (mobile-first dropdown navigation) ----------------------------
 with st.popover("☰ Main Menu", use_container_width=False):
     st.markdown("#### 📚 Modules")
