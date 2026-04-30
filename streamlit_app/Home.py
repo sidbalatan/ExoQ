@@ -126,10 +126,15 @@ st.caption(
 input_left, input_right = st.columns([5, 1])
 with input_left:
     manual_text = st.text_area(
-        "Coordinates (one per line: RA, Dec)",
+        "Coordinates — *replace the example below with your own* (one per line: RA, Dec)",
         value="150.0, 10.0\n200.0, -20.0\n250.0, 30.0",
         height=150,
         help="Enter one coordinate pair per line as 'RA, Dec' in decimal degrees. Lines starting with # are ignored.",
+    )
+    st.caption(
+        "ℹ️ The three lines above are sample coordinates. **Delete them and paste in your "
+        "own RA/Dec pairs** before clicking *Run Module 1* — otherwise you'll be analyzing "
+        "the demo stars, not yours."
     )
 with input_right:
     st.markdown("<div style='height: 1.85rem'></div>", unsafe_allow_html=True)
