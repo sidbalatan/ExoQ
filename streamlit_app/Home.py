@@ -11,6 +11,7 @@ import numpy as np
 import sys
 import os
 from identifier_resolver import parse_manual_input
+from gaia_enricher import enrich_rows
 
 # Add src to path for module imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -386,6 +387,50 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 coordinates = [{"ra": r["ra"], "dec": r["dec"]} for r in rows]
                 input_count = len(coordinates)
                 df, validation = module1.load_manual_entry(coordinates)
+
+                # ----- LIVE Gaia DR3 ADQL enrichment -------------------------
+                # Cross-match each manual entry against the Gaia DR3 archive
+                # so the Survival Test classifier has real teff/logg/RUWE/BP-RP.
+                progress_bar = st.progress(0.0, text="Cross-matching against live Gaia DR3 …")
+
+                def _on_gaia_progress(done, total, msg):
+                    pct = min(done / max(total, 1), 1.0)
+                    progress_bar.progress(pct, text=msg)
+
+                enriched = enrich_rows(rows, progress_cb=_on_gaia_progress)
+                progress_bar.empty()
+
+                if len(enriched) == len(df):
+                    # Promote Gaia coords/columns into the working df by row index.
+                    enriched = enriched.reset_index(drop=True)
+                    df = df.reset_index(drop=True)
+                    for col in [
+                        "ra", "dec", "parallax", "ruwe",
+                        "phot_g_mean_mag", "bp_rp",
+                        "teff_gspphot", "logg_gspphot",
+                        "gaia_match_arcsec", "gaia_dr3_name", "identifier",
+                    ]:
+                        if col in enriched.columns:
+                            df[col] = enriched[col]
+                    # Replace the synthetic source_id with the real Gaia DR3 one
+                    # whenever the cross-match succeeded.
+                    if "source_id" in enriched.columns:
+                        real_sid = enriched["source_id"]
+                        df["source_id"] = real_sid.where(real_sid.notna(), df["source_id"])
+                    module1.data = df
+
+                # Surface match diagnostics so the user can see what came back.
+                matched = int(enriched["source_id"].notna().sum()) if "source_id" in enriched.columns else 0
+                missed = len(enriched) - matched
+                if matched:
+                    st.success(
+                        f"📡 Gaia DR3 ADQL: matched **{matched}** of {len(enriched)} entries to live Gaia sources."
+                    )
+                if missed:
+                    st.warning(
+                        f"⚠️ {missed} entry(ies) had no Gaia DR3 match within 3 arcsec — "
+                        f"they will appear without Teff / logg / RUWE values."
+                    )
 
             # Capture the survivor headline numbers for the celebration block.
             survivor_count = int(len(df))
