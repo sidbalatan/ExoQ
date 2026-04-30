@@ -201,7 +201,7 @@ class StellarParameterModule:
         pass_rate = report['pass_rate'] * 100
         
         summary = f"""
-🌟 Stellar Parameters Retrieved!
+🌟 Module 2: Stellar Parameters | 2 of 8 Complete!
 
 ✅ Successfully retrieved {len(df)} stellar parameters from Gaia DR3
 ✅ Quality filters applied: {report['total_passed']} stars passed all cuts

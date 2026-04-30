@@ -191,7 +191,7 @@ class ExoplanetCrossMatchModule:
         report = self.crossmatch_report
         
         summary = f"""
-🪐 Exoplanet Cross-Match Complete!
+🪐 Module 3: Exoplanet Cross-Match | 3 of 8 Complete!
 
 ✅ Cross-matched {report['n_total']} stars with NASA Exoplanet Archive
 ✅ Found {report['n_exoplanet_hosts']} stars with known exoplanets

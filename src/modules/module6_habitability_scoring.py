@@ -359,7 +359,7 @@ class HabitabilityScoringModule:
         pass_rate = (report['n_highly_habitable'] / report['n_total'] * 100) if report['n_total'] > 0 else 0
         
         summary = f"""
-💧 Habitability Scoring Complete!
+💧 Module 6: Habitability Scoring | 6 of 8 Complete!
 
 ✅ Scored {report['n_total']} stars for habitability
 ✅ {report['n_highly_habitable']} stars are highly habitable (score > 0.8)

@@ -181,7 +181,7 @@ class ResultsSummaryModule:
         pass_rate = (passed_quality / report['n_total_stars'] * 100) if report['n_total_stars'] > 0 else 100
         
         summary = f"""
-🏆 ExoQ Pipeline Complete! Congratulations!
+🏆 Module 7: Results Summary | 7 of 8 Complete!
 
 🎉 You've successfully analyzed {report['n_total_stars']} K Dwarf stars!
 

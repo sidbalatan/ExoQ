@@ -198,7 +198,7 @@ class DataExportModule:
         pass_rate = 100.0
         
         summary = f"""
-💾 Data Export Complete!
+💾 Module 8: Data Export | 8 of 8 Complete!
 
 ✅ Results exported successfully
 ✅ {report['n_formats']} formats generated and ready for download

@@ -241,7 +241,7 @@ class TransitDetectionModule:
         pass_rate = (report['n_passed'] / report['n_total'] * 100) if report['n_total'] > 0 else 0
         
         summary = f"""
-🎯 Transit Detection Complete!
+🎯 Module 5: Transit Detection | 5 of 8 Complete!
 
 ✅ Analyzed {report['n_total']} light curves
 ✅ Detected {report['n_candidates']} transit candidates

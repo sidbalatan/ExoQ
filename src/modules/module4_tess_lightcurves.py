@@ -164,7 +164,7 @@ class TESSLightCurveModule:
         pass_rate = (report['n_available'] / report['n_total'] * 100) if report['n_total'] > 0 else 100
         
         summary = f"""
-📈 TESS Light Curves Retrieved!
+📈 Module 4: TESS Light Curves | 4 of 8 Complete!
 
 ✅ Successfully downloaded {len(df)} light curves from TESS
 ✅ Total observation time: {report['total_observation_days']:.1f} days

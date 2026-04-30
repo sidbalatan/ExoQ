@@ -303,7 +303,7 @@ class DataInputModule:
         pass_rate = (validation['valid_stars'] / validation['total_stars'] * 100) if validation['total_stars'] > 0 else 0
         
         summary = f"""
-🎉 Data Input Complete!
+🎉 Module 1: Data Input | 1 of 8 Complete!
 
 ✅ Successfully loaded {len(df)} K Dwarf coordinates
 ✅ All coordinates validated and ready for analysis
