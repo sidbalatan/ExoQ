@@ -36,7 +36,7 @@ st.markdown("---")
 with st.popover("☰ Main Menu", use_container_width=False):
     st.markdown("#### 📚 Modules")
     st.markdown(
-        "**▶ Module 1 — Data Input**  \n"
+        "**▶ Module 1 of 8 - Data Input**  \n"
         "🔒 Module 2 — Stellar Parameters  \n"
         "🔒 Module 3 — Exoplanet Cross-Match  \n"
         "🔒 Module 4 — TESS Light Curves  \n"
@@ -57,7 +57,7 @@ with st.popover("☰ Main Menu", use_container_width=False):
     st.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
 
 # --- Main page: Module 1 input controls --------------------------------------
-st.subheader("📥 Module 1 — Data Input")
+st.subheader("📥 Module 1 of 8 - Data Input")
 st.markdown(
     "**The starting line of your quest for Earth 2.0.**  \n"
     "Hand the pipeline a list of sky coordinates — either upload a CSV "
