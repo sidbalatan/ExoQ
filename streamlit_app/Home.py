@@ -33,7 +33,7 @@ st.markdown(
     """
     <div style="text-align: center; margin-top: 0.5rem; margin-bottom: 1rem;">
         <div style="font-size: 4rem; line-height: 1;">🌍</div>
-        <h1 style="margin: 0.25rem 0 0 0; font-weight: 700;">
+        <h1 style="margin: 0.25rem 0 0 0; font-weight: 700; font-size: 1.5rem;">
             ExoQ: Exoplanet Community Quest for Earth 2.0
         </h1>
     </div>
