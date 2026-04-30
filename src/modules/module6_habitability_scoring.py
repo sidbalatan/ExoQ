@@ -45,6 +45,7 @@ class HabitabilityScoringModule:
         # Validate input
         if not isinstance(stellar_data, pd.DataFrame):
             logger.error(f"stellar_data is not a DataFrame: {type(stellar_data)}")
+            logger.error(f"stellar_data value: {stellar_data}")
             # Return empty DataFrame with required structure
             empty_df = pd.DataFrame({
                 'source_id': [],
