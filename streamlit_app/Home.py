@@ -173,8 +173,8 @@ with input_left:
         if preview_rows:
             n_resolved = sum(1 for r in preview_rows if r.get("identifier"))
             n_numeric = len(preview_rows) - n_resolved
-            st.success(
-                f"✅ {len(preview_rows)} entries ready — "
+            st.info(
+                f"📋 {len(preview_rows)} entries ready — "
                 f"{n_resolved} resolved from identifiers, {n_numeric} numeric RA/Dec."
             )
             st.dataframe(
