@@ -1,0 +1,41 @@
+# ExoQ: Community Quest for Earth 2.0
+# Python Dependencies
+
+# Streamlit - Web Application Framework
+streamlit>=1.56.0
+
+# Astronomical Data & Analysis
+astropy>=7.2.0
+astroquery>=0.4.11
+lightkurve>=2.6.0
+
+# Data Processing
+pandas>=2.3.3
+numpy>=2.4.4
+scipy>=1.17.1
+
+# Machine Learning
+scikit-learn>=1.8.0
+
+# Visualization
+plotly>=6.7.0
+matplotlib>=3.10.9
+altair>=6.1.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Authentication & API
+requests>=2.32.5
+python-dotenv>=1.2.2
+
+# Utilities
+python-dateutil>=2.9.0
+pytz>=2025.3.post1
+pyyaml>=6.0.3
+tqdm>=4.67.3
+
+# Jupyter (for development)
+jupyter>=1.1.0
+ipykernel>=7.2.0
