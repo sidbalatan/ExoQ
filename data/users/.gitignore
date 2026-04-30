@@ -1,0 +1,4 @@
+# User workspace data is private -- do not commit.
+*
+!.gitignore
+!README.md

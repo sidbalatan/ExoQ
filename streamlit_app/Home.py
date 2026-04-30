@@ -12,6 +12,8 @@ import sys
 import os
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
+from workspace import current_user, sign_in_widget, get_store
+from workspace.store import RunMeta, RunRecord, new_run_id
 
 # Add src to path for module imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -105,6 +107,8 @@ st.markdown(
 
 # --- Main Menu (mobile-first dropdown navigation) ----------------------------
 with st.popover("☰ Main Menu", use_container_width=False):
+    sign_in_widget()
+    st.markdown("---")
     st.markdown("#### 📚 Modules")
     st.markdown(
         "**▶ Module 1 of 8 - Data Input**  \n"
@@ -501,6 +505,53 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.session_state.summaries['module1'] = summary
             st.session_state.pipeline_data = df
             st.session_state.pipeline_step = 1
+
+            # ----- Auto-save the run to the user's workspace ----------
+            uid = current_user()
+            if uid:
+                try:
+                    # Tier counts derived inline so we don't depend on the
+                    # display block below having run yet.
+                    def _tier_counts(_df):
+                        cols = {c.lower(): c for c in _df.columns}
+                        teff = pd.to_numeric(_df.get(cols.get('teff_gspphot') or cols.get('teff') or 'teff', np.nan), errors='coerce')
+                        logg = pd.to_numeric(_df.get(cols.get('logg_gspphot') or cols.get('logg') or 'logg', np.nan), errors='coerce')
+                        ruwe = pd.to_numeric(_df.get(cols.get('ruwe') or 'ruwe', np.nan), errors='coerce')
+                        bprp_key = cols.get('bp_rp') or cols.get('bp-rp') or 'bp_rp'
+                        bprp = pd.to_numeric(_df.get(bprp_key, pd.Series([np.nan]*len(_df))), errors='coerce')
+                        passm = teff.between(3900, 5300) & (logg >= 4.0) & (ruwe < 1.4)
+                        gold = passm & teff.between(4000, 5200) & (logg >= 4.2) & (ruwe < 1.1) & (bprp.between(1.3, 3.0) | bprp.isna())
+                        silver = passm & ~gold
+                        failed = ~passm
+                        return int(gold.sum()), int(silver.sum()), int(failed.sum())
+
+                    g, s, f = _tier_counts(df)
+                    run_id = new_run_id()
+                    meta = RunMeta(
+                        run_id=run_id,
+                        user_id=uid,
+                        created_at=pd.Timestamp.utcnow().isoformat(),
+                        module="module1",
+                        source="csv" if data_source == "Upload CSV" else "manual",
+                        inputs_count=int(input_count),
+                        survivors_count=int(g + s),
+                        gold=g, silver=s, failed=f,
+                        label="",
+                    )
+                    record = RunRecord(
+                        meta=meta,
+                        frames={"survivors": df.copy()},
+                        extras={
+                            "data_source": data_source,
+                            "manual_text": manual_text if data_source != "Upload CSV" else "",
+                            "n_stars_cap": int(n_stars),
+                        },
+                    )
+                    saved_id = get_store().save_run(record)
+                    st.session_state["m1_last_saved_run_id"] = saved_id
+                except Exception as exc:
+                    st.warning(f"Run completed but could not be saved to your workspace: {exc}")
+
             st.rerun()
         else:
             inputs = int(st.session_state.get('m1_input_count',
