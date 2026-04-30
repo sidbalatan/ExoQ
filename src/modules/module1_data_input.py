@@ -6,11 +6,49 @@ Purpose: Accept and validate input data (vetted K Dwarfs or virgin coordinates)
 
 import pandas as pd
 import numpy as np
-from typing import Union, Dict, Any, Tuple
+from pathlib import Path
+from typing import Union, Dict, Any, Tuple, Optional
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Real validated K Dwarf catalog (Spitzer + Gaia DR3 + 2MASS cross-matched)
+DEFAULT_KDWARF_CATALOG = Path(__file__).resolve().parents[1] / "data" / "K_Dwarfs_Search_Results_validated_k_dwarfs (1).csv"
+
+# Mapping from raw catalog column names to pipeline-standardized names.
+# Anything not in this map is preserved as-is for downstream modules.
+CATALOG_COLUMN_MAP = {
+    "Source": "source_id",            # Gaia DR3 source_id (numeric)
+    "DR3Name": "gaia_dr3_name",       # human-readable Gaia name
+    "objid": "spitzer_objid",
+    "ra": "ra",
+    "dec": "dec",
+    "Plx": "parallax",
+    "e_Plx": "parallax_error",
+    "RUWE": "ruwe",
+    "Teff": "teff_gspphot",
+    "logg": "logg_gspphot",
+    "[Fe/H]": "feh_gspphot",
+    "Dist": "distance_gspphot_pc",
+    "dist_pc": "distance_pc",
+    "Gmag": "phot_g_mean_mag",
+    "BPmag": "phot_bp_mean_mag",
+    "RPmag": "phot_rp_mean_mag",
+    "BP-RP": "bp_rp",
+    "j": "j_mag_2mass",
+    "h": "h_mag_2mass",
+    "k": "k_mag_2mass",
+    "k_subtype": "k_subtype",
+    "validation_score": "validation_score",
+    "validation_tier": "validation_tier",
+    "confidence": "confidence",
+    "flag_giant": "flag_giant",
+    "flag_mdwarf": "flag_mdwarf",
+    "flag_binary": "flag_binary",
+    "flag_variable": "flag_variable",
+    "contaminant": "contaminant",
+}
 
 
 class DataInputModule:
@@ -70,6 +108,133 @@ class DataInputModule:
         except Exception as e:
             logger.error(f"Error loading CSV: {e}")
             raise
+    
+    def load_real_kdwarf_catalog(
+        self,
+        file_path: Optional[Union[str, Path]] = None,
+        n_stars: Optional[int] = None,
+        tier_filter: Optional[list] = None,
+        confidence_filter: Optional[list] = None,
+        exclude_giants: bool = True,
+        exclude_mdwarfs: bool = True,
+        exclude_contaminants: bool = True,
+        random_sample: bool = False,
+        random_seed: int = 42,
+    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+        """
+        Load the real validated K Dwarf catalog (Spitzer + Gaia DR3 + 2MASS).
+        
+        Parameters
+        ----------
+        file_path : str or Path, optional
+            Path to catalog CSV. Defaults to bundled validated catalog.
+        n_stars : int, optional
+            If given, return at most this many stars (after filtering).
+        tier_filter : list of str, optional
+            Keep only rows whose `validation_tier` is in this list
+            (e.g. ["Gold", "Silver", "Bronze"]).
+        confidence_filter : list of str, optional
+            Keep only rows whose `confidence` is in this list
+            (e.g. ["Confirmed", "Likely"]).
+        exclude_giants : bool
+            Drop rows where flag_giant is True.
+        exclude_mdwarfs : bool
+            Drop rows where flag_mdwarf is True.
+        exclude_contaminants : bool
+            Drop rows where contaminant is True.
+        random_sample : bool
+            If True, randomly sample n_stars rather than taking the first n.
+        random_seed : int
+            Seed for the random sample.
+        
+        Returns
+        -------
+        tuple
+            (DataFrame with standardized columns, validation report)
+        """
+        path = Path(file_path) if file_path else DEFAULT_KDWARF_CATALOG
+        logger.info(f"Loading validated K Dwarf catalog from {path}")
+        
+        if not path.exists():
+            raise FileNotFoundError(f"K Dwarf catalog not found: {path}")
+        
+        raw = pd.read_csv(path)
+        n_raw = len(raw)
+        logger.info(f"Raw catalog rows: {n_raw}")
+        
+        # Apply quality filters
+        df = raw.copy()
+        cuts = {}
+        
+        if exclude_giants and "flag_giant" in df.columns:
+            before = len(df)
+            df = df[df["flag_giant"] != True]
+            cuts["giants_removed"] = before - len(df)
+        
+        if exclude_mdwarfs and "flag_mdwarf" in df.columns:
+            before = len(df)
+            df = df[df["flag_mdwarf"] != True]
+            cuts["mdwarfs_removed"] = before - len(df)
+        
+        if exclude_contaminants and "contaminant" in df.columns:
+            before = len(df)
+            df = df[df["contaminant"] != True]
+            cuts["contaminants_removed"] = before - len(df)
+        
+        if tier_filter and "validation_tier" in df.columns:
+            before = len(df)
+            df = df[df["validation_tier"].isin(tier_filter)]
+            cuts["tier_filtered_out"] = before - len(df)
+        
+        if confidence_filter and "confidence" in df.columns:
+            before = len(df)
+            df = df[df["confidence"].isin(confidence_filter)]
+            cuts["confidence_filtered_out"] = before - len(df)
+        
+        # Sample if requested
+        if n_stars is not None and n_stars < len(df):
+            if random_sample:
+                df = df.sample(n=n_stars, random_state=random_seed).reset_index(drop=True)
+            else:
+                df = df.head(n_stars).reset_index(drop=True)
+        else:
+            df = df.reset_index(drop=True)
+        
+        # Recover full-precision Gaia DR3 source_id from the human-readable
+        # DR3Name column ("Gaia DR3 4271989156548409344") because the raw
+        # `Source` column is stored in scientific notation and loses precision.
+        if "DR3Name" in df.columns:
+            df["source_id"] = (
+                df["DR3Name"]
+                .astype(str)
+                .str.replace("Gaia DR3 ", "", regex=False)
+                .str.strip()
+            )
+            df["source_id"] = pd.to_numeric(df["source_id"], errors="coerce").astype("Int64")
+            # Drop the raw scientific-notation Source column if present so the
+            # rename below doesn't clobber our reconstructed source_id.
+            if "Source" in df.columns:
+                df = df.drop(columns=["Source"])
+        
+        # Standardize column names
+        rename_map = {raw_col: std_col for raw_col, std_col in CATALOG_COLUMN_MAP.items() if raw_col in df.columns}
+        df = df.rename(columns=rename_map)
+        
+        # Validate coordinates
+        validation_report = self._validate_coordinates(df)
+        validation_report["catalog_path"] = str(path)
+        validation_report["n_raw"] = n_raw
+        validation_report["filter_cuts"] = cuts
+        
+        if not validation_report["valid"]:
+            raise ValueError(f"Coordinate validation failed: {validation_report['errors']}")
+        
+        self.data = df
+        self.source = "validated_kdwarf_catalog"
+        self.validation_report = validation_report
+        
+        logger.info(f"Validated K Dwarf catalog loaded: {len(df)} stars (from {n_raw} raw)")
+        return df, validation_report
     
     def load_from_virgin_list(self, n_stars: int = 100) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """

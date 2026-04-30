@@ -48,9 +48,17 @@ This page runs all 8 modules sequentially to demonstrate the complete pipeline:
 # Sidebar controls
 st.sidebar.header("Pipeline Controls")
 
-n_stars = st.sidebar.slider("Number of stars", min_value=5, max_value=100, value=10, step=5)
-data_source = st.sidebar.selectbox("Data source", ["Virgin List", "Vetted List", "Manual Entry"])
-use_mock = st.sidebar.checkbox("Use mock data", value=True, help="Use mock data for testing (no API calls)")
+n_stars = st.sidebar.slider("Number of stars", min_value=5, max_value=363, value=10, step=5)
+data_source = st.sidebar.selectbox(
+    "Data source",
+    ["Real K Dwarf Catalog", "Virgin List", "Vetted List", "Manual Entry"],
+    help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV (Spitzer + Gaia DR3 + 2MASS).",
+)
+random_sample = st.sidebar.checkbox(
+    "Random sample from catalog", value=True,
+    help="Only used for 'Real K Dwarf Catalog'. Off = take first N rows.",
+)
+use_mock = st.sidebar.checkbox("Use mock data (Modules 2-8)", value=True, help="Use mock data for testing (no API calls)")
 
 run_pipeline = st.sidebar.button("🚀 Run Full Pipeline", type="primary")
 
@@ -84,7 +92,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             
             module1 = DataInputModule()
             
-            if data_source == "Virgin List":
+            if data_source == "Real K Dwarf Catalog":
+                df, validation = module1.load_real_kdwarf_catalog(
+                    n_stars=n_stars,
+                    random_sample=random_sample,
+                )
+            elif data_source == "Virgin List":
                 df, validation = module1.load_from_virgin_list(n_stars=n_stars)
             elif data_source == "Vetted List":
                 df, validation = module1.load_from_vetted_list(n_stars=n_stars)
