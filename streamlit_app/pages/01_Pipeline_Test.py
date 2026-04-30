@@ -78,7 +78,12 @@ if data_source == "Manual Entry":
 
 use_mock = st.sidebar.checkbox("Use mock data (Modules 2-8)", value=True, help="Use mock data for testing (no API calls)")
 
-run_pipeline = st.sidebar.button("🚀 Run Full Pipeline", type="primary")
+run_module1 = st.sidebar.button("▶️ Run Module 1", type="primary")
+run_pipeline = st.sidebar.button(
+    "🚀 Run Full Pipeline",
+    disabled=True,
+    help="Disabled while we focus on Module 1. Will be re-enabled once all modules are wired up.",
+)
 
 # Initialize session state
 if 'pipeline_data' not in st.session_state:
@@ -87,19 +92,30 @@ if 'pipeline_step' not in st.session_state:
     st.session_state.pipeline_step = 0
 if 'pipeline_started' not in st.session_state:
     st.session_state.pipeline_started = False
+if 'm1_only' not in st.session_state:
+    st.session_state.m1_only = False
 if 'summaries' not in st.session_state:
     st.session_state.summaries = {}
+
+if run_module1:
+    st.session_state.pipeline_step = 0
+    st.session_state.pipeline_started = True
+    st.session_state.m1_only = True
+    st.session_state.pipeline_data = None
+    st.session_state.summaries = {}
+    st.rerun()
 
 if run_pipeline:
     st.session_state.pipeline_step = 0
     st.session_state.pipeline_started = True
+    st.session_state.m1_only = False
     st.session_state.pipeline_data = None
     st.session_state.summaries = {}
     st.rerun()
 
 # Show instruction if pipeline hasn't started
 if not st.session_state.pipeline_started:
-    st.info("👆 Click 'Run Full Pipeline' in the sidebar to begin the ExoQ pipeline analysis.")
+    st.info("👆 Click 'Run Module 1' in the sidebar to load and validate input data.")
 
 # Only run modules if pipeline has been started
 if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
@@ -180,12 +196,14 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 cols_to_show.append('dec')
             st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
-        if st.session_state.pipeline_step == 1:
+        if st.session_state.pipeline_step == 1 and not st.session_state.m1_only:
             if st.button("Continue to Module 2", key="m1_continue"):
                 st.session_state.pipeline_step = 2
                 st.rerun()
+        elif st.session_state.pipeline_step == 1 and st.session_state.m1_only:
+            st.info("✅ Module 1 complete. Modules 2-8 are disabled while we focus on Module 1.")
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 1:
     # Module 2: Stellar Parameters
     with st.expander("🌟 Module 2: Stellar Parameters", expanded=st.session_state.pipeline_step == 1):
         if st.session_state.pipeline_step == 1:
@@ -216,7 +234,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
                 st.session_state.pipeline_step = 3
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 2:
     # Module 3: Exoplanet Cross-Match
     with st.expander("🪐 Module 3: Exoplanet Cross-Match", expanded=st.session_state.pipeline_step == 2):
         if st.session_state.pipeline_step == 2:
@@ -247,7 +265,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
                 st.session_state.pipeline_step = 4
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 3:
     # Module 4: TESS Light Curves
     with st.expander("📈 Module 4: TESS Light Curves", expanded=st.session_state.pipeline_step == 3):
         if st.session_state.pipeline_step == 3:
@@ -278,7 +296,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
                 st.session_state.pipeline_step = 5
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 4:
     # Module 5: Transit Detection
     with st.expander("🎯 Module 5: Transit Detection", expanded=st.session_state.pipeline_step == 4):
         if st.session_state.pipeline_step == 4:
@@ -309,7 +327,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
                 st.session_state.pipeline_step = 6
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 5:
     # Module 6: Habitability Scoring
     with st.expander("💧 Module 6: Habitability Scoring", expanded=st.session_state.pipeline_step == 5):
         if st.session_state.pipeline_step == 5:
@@ -347,7 +365,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
                 st.session_state.pipeline_step = 7
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 6:
     # Module 7: Results Summary
     with st.expander("🏆 Module 7: Results Summary", expanded=st.session_state.pipeline_step == 6):
         if st.session_state.pipeline_step == 6:
@@ -381,7 +399,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
                 st.session_state.pipeline_step = 8
                 st.rerun()
 
-if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
+if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 7:
     # Module 8: Data Export
     with st.expander("💾 Module 8: Data Export", expanded=st.session_state.pipeline_step == 7):
         if st.session_state.pipeline_step == 7:
