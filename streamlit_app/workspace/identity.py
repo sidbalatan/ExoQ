@@ -135,16 +135,19 @@ def auth_strip() -> None:
         """
         <style>
             .exoq-auth-strip {
-                font-size: 0.8rem;
+                font-size: 0.6rem;
                 color: #6b7280;
-                margin: -0.25rem 0 0.25rem 0;
+                margin: -0.25rem 0 0.1rem 0;
             }
             .exoq-auth-strip b { color: #374151; font-weight: 600; }
             div[data-testid="stPopover"] button[aria-haspopup="true"] {
-                font-size: 0.8rem !important;
-                padding: 0.1rem 0.6rem !important;
+                font-size: 0.6rem !important;
+                padding: 0.05rem 0.5rem !important;
                 min-height: 0 !important;
+                line-height: 1.1 !important;
             }
+            /* Tighten the columns so the two popovers sit shoulder-to-shoulder */
+            .exoq-auth-row [data-testid="column"] { padding: 0 0.1rem !important; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -158,7 +161,7 @@ def auth_strip() -> None:
             st.markdown(
                 f"<div class='exoq-auth-strip' style='text-align:right;padding-top:0.4rem;'>"
                 f"Signed in as <b>{display}</b> &nbsp;·&nbsp;"
-                f"<code style='font-size:0.75rem'>{uid}</code></div>",
+                f"<code style='font-size:0.55rem'>{uid}</code></div>",
                 unsafe_allow_html=True,
             )
         with c2:
@@ -167,22 +170,18 @@ def auth_strip() -> None:
                 st.rerun()
         return
 
-    # Signed out: status text + two popovers, centered, ~0.8rem.
-    c1, c2, c3, c4, c5 = st.columns([3, 1, 1, 1, 3])
+    # Signed out: two compact popovers, side by side, centered.
+    st.markdown('<div class="exoq-auth-row">', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([5, 1, 1, 5])
     with c2:
-        st.markdown(
-            "<div class='exoq-auth-strip' style='text-align:right;padding-top:0.45rem;'>"
-            "Not signed in &nbsp;·&nbsp;</div>",
-            unsafe_allow_html=True,
-        )
-    with c3:
         with st.popover("Sign in", use_container_width=True):
             st.markdown("**Sign in to ExoQ**")
             _sign_in_form("exoq_signin_strip")
-    with c4:
+    with c3:
         with st.popover("Sign up", use_container_width=True):
             st.markdown("**Create your ExoQ account**")
             _sign_up_form("exoq_signup_strip")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def sign_in_widget(*, location_label: str = "👤 Sign in") -> None:
