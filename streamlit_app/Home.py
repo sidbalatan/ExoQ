@@ -280,7 +280,7 @@ with st.expander("Read more"):
         "Only Survivors continue to Modules 2–8."
     )
 
-run_module1 = st.button("▶️ Run Module 1 — Begin the Survival Test", type="primary")
+run_module1 = st.button("▶️ Run Module 1 — Begin GAIA Survival Test", type="primary")
 st.markdown("---")
 
 # Initialize session state
@@ -412,14 +412,73 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 )
                 st.caption("They are now ready to continue the journey toward Earth 2.0.")
 
-            # Validation-tier breakdown if available
+            # Re-derive the tier on the fly from the actual Gaia DR3 quality
+            # columns. We deliberately ignore the CSV's `validation_tier`
+            # column because in some catalogs every survivor is stamped
+            # "Bronze" by an upstream pipeline, which would mis-bucket every
+            # star into "Failed" under our renamed UI labels.
             data = st.session_state.pipeline_data
-            if 'validation_tier' in data.columns:
-                tier_counts = data['validation_tier'].value_counts()
-                tcol1, tcol2, tcol3 = st.columns(3)
-                tcol1.metric("🥇 Gaia Certified K Dwarf", int(tier_counts.get('Gold', 0)))
-                tcol2.metric("🥈 Need Follow Up",         int(tier_counts.get('Silver', 0)))
-                tcol3.metric("🥉 Failed",                  int(tier_counts.get('Bronze', 0)))
+
+            def _col(*names):
+                """Return the first column name present in `data`, else None."""
+                for n in names:
+                    if n in data.columns:
+                        return n
+                return None
+
+            teff_col = _col('teff_gspphot', 'Teff', 'teff')
+            logg_col = _col('logg_gspphot', 'logg')
+            ruwe_col = _col('ruwe', 'RUWE')
+            bprp_col = _col('bp_rp', 'BP_RP', 'BP-RP')
+
+            n = len(data)
+            gold = silver = failed = 0
+            tier_series = None
+            if teff_col and logg_col and ruwe_col:
+                teff = pd.to_numeric(data[teff_col], errors='coerce')
+                logg = pd.to_numeric(data[logg_col], errors='coerce')
+                ruwe = pd.to_numeric(data[ruwe_col], errors='coerce')
+                bprp = (
+                    pd.to_numeric(data[bprp_col], errors='coerce')
+                    if bprp_col else pd.Series([np.nan] * n, index=data.index)
+                )
+
+                # Pass = K-Dwarf survival cuts (loose).
+                pass_mask = (
+                    teff.between(3900, 5300)
+                    & (logg >= 4.0)
+                    & (ruwe < 1.4)
+                )
+                # Gold = Gaia Certified K Dwarf -> all clean with margin.
+                gold_mask = pass_mask & (
+                    teff.between(4000, 5200)
+                    & (logg >= 4.2)
+                    & (ruwe < 1.1)
+                    & (bprp.between(1.3, 3.0) | bprp.isna())
+                )
+                # Silver = passes thresholds but borderline.
+                silver_mask = pass_mask & ~gold_mask
+                # Failed = doesn't meet minimum K-Dwarf cuts.
+                failed_mask = ~pass_mask
+
+                tier_series = np.where(
+                    gold_mask, 'Gaia Certified K Dwarf',
+                    np.where(silver_mask, 'Need Follow Up', 'Failed')
+                )
+                gold = int(gold_mask.sum())
+                silver = int(silver_mask.sum())
+                failed = int(failed_mask.sum())
+
+                # Expose the derived tier on the dataframe so it appears in
+                # the preview table and can be exported.
+                data = data.copy()
+                data['tier'] = tier_series
+                st.session_state.pipeline_data = data
+
+            tcol1, tcol2, tcol3 = st.columns(3)
+            tcol1.metric("� Gaia Certified K Dwarf", gold)
+            tcol2.metric("🥈 Need Follow Up",         silver)
+            tcol3.metric("🥉 Failed",                  failed)
 
             st.success(st.session_state.summaries.get('module1', 'Module 1: Data Input | 1 of 8 Complete!'))
 
@@ -427,7 +486,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             preview_cols = [c for c in [
                 'source_id', 'gaia_dr3_name', 'ra', 'dec',
                 'teff_gspphot', 'logg_gspphot', 'ruwe',
-                'k_subtype', 'validation_tier'
+                'k_subtype', 'tier'
             ] if c in data.columns]
             if not preview_cols:
                 preview_cols = list(data.columns[:6])
