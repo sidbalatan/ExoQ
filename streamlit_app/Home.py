@@ -112,14 +112,16 @@ elif data_source == "Manual Entry":
 # members-only Run Full Pipeline. No user-facing toggle is needed.
 use_mock = True
 
-with st.expander("🧬 What happens when you click Run Module 1? — *The Gaia DR3 Survival Test*", expanded=True):
+st.markdown(
+    "**🧬 The Gaia DR3 Survival Test.**  \n"
+    "Your coordinates are pushed against **ESA Gaia DR3** and forced through a gauntlet of "
+    "quality filters. Only the fittest stars — the **🌱 Survivors** — move on to Modules 2–8."
+)
+with st.expander("Read more"):
     st.markdown(
-        "Your coordinates are pushed against **ESA Gaia DR3** "
-        "(*1.8 billion stars, the most precise stellar census ever made*) "
-        "and forced through a gauntlet of quality filters. "
-        "Just like life on Earth 1.0, only the fittest stars make it to the next stage. "
-        "We call the ones that pass **🌱 Survivors** — they are the K Dwarfs worth pursuing in our "
-        "quest for **Earth 2.0**."
+        "ESA Gaia DR3 is the most precise stellar census ever made — *1.8 billion stars*. "
+        "Just like life on Earth 1.0, only the fittest survive. The K Dwarfs that pass every "
+        "cut become **Survivors**, the ones worth pursuing in our quest for **Earth 2.0**."
     )
 
     st.markdown("##### 🛡️ Survival criteria")
@@ -156,7 +158,7 @@ with st.expander("🧬 What happens when you click Run Module 1? — *The Gaia D
 
     st.markdown(
         "##### 🏷️ Validation tiers\n"
-        "Each Survivor is also stamped with a confidence tier based on how cleanly it cleared the gauntlet:\n"
+        "Each Survivor is stamped with a confidence tier based on how cleanly it cleared the gauntlet:\n"
         "- 🥇 **Gold** — passed every cut with margin to spare\n"
         "- 🥈 **Silver** — passed with minor borderline values\n"
         "- 🥉 **Bronze** — passed but sits near a threshold (worth a second look)"
