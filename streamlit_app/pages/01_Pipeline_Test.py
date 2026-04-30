@@ -101,7 +101,13 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.rerun()
         else:
             st.success("Data input complete!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'ra', 'dec']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id']
+            if 'ra' in st.session_state.pipeline_data.columns:
+                cols_to_show.append('ra')
+            if 'dec' in st.session_state.pipeline_data.columns:
+                cols_to_show.append('dec')
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 1:
             if st.button("Continue to Module 2", key="m1_continue"):
@@ -125,7 +131,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 1:
             st.rerun()
         else:
             st.success("Stellar parameters retrieved!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id']
+            for col in ['ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']:
+                if col in st.session_state.pipeline_data.columns:
+                    cols_to_show.append(col)
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 2:
             if st.button("Continue to Module 3", key="m2_continue"):
@@ -149,7 +160,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
             st.rerun()
         else:
             st.success("Exoplanet cross-match complete!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id']
+            for col in ['has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']:
+                if col in st.session_state.pipeline_data.columns:
+                    cols_to_show.append(col)
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 3:
             if st.button("Continue to Module 4", key="m3_continue"):
@@ -173,7 +189,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
             st.rerun()
         else:
             st.success("TESS light curves retrieved!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'tess_available', 'sectors', 'data_points', 'cadence_minutes']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id']
+            for col in ['tess_available', 'sectors', 'data_points', 'cadence_minutes']:
+                if col in st.session_state.pipeline_data.columns:
+                    cols_to_show.append(col)
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 4:
             if st.button("Continue to Module 5", key="m4_continue"):
@@ -197,7 +218,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
             st.rerun()
         else:
             st.success("Transit detection complete!")
-            st.dataframe(st.session_state.pipeline_data[['source_id', 'has_transit_candidate', 'transit_period', 'transit_snr']].head())
+            # Only display columns that exist
+            cols_to_show = ['source_id']
+            for col in ['has_transit_candidate', 'transit_period', 'transit_snr']:
+                if col in st.session_state.pipeline_data.columns:
+                    cols_to_show.append(col)
+            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
         
         if st.session_state.pipeline_step == 5:
             if st.button("Continue to Module 6", key="m5_continue"):
