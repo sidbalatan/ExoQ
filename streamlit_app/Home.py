@@ -27,25 +27,12 @@ st.set_page_config(
     page_title="ExoQ: Exoplanet Community Quest for Earth 2.0",
     page_icon="🌍",
     layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# Fully hide the Streamlit sidebar (and its toggle button).
-st.markdown(
-    """
-    <style>
-        [data-testid="stSidebar"] { display: none !important; }
-        [data-testid="stSidebarCollapsedControl"] { display: none !important; }
-        [data-testid="collapsedControl"] { display: none !important; }
-    </style>
-    """,
-    unsafe_allow_html=True,
 )
 
 st.title("🌍 ExoQ: Exoplanet Community Quest for Earth 2.0")
 st.markdown("---")
 
-# --- Main Menu (mobile-first dropdown replaces the sidebar) ------------------
+# --- Main Menu (mobile-first dropdown navigation) ----------------------------
 with st.popover("☰ Main Menu", use_container_width=False):
     st.markdown("#### 📚 Modules")
     st.markdown(
