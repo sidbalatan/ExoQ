@@ -139,7 +139,7 @@ st.caption(
     "(Teff, logg, RUWE, photometry, …) are auto-recognized."
 )
 
-input_left, input_right = st.columns([5, 1])
+input_left, input_right = st.columns([3, 2])
 with input_left:
     manual_text = st.text_area(
         "Coordinates or Identifiers",
