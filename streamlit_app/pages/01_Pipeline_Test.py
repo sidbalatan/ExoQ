@@ -31,20 +31,6 @@ st.set_page_config(
 st.title("🔬 ExoQ Pipeline Test")
 st.markdown("---")
 
-st.markdown("""
-### Test the full ExoQ data pipeline
-
-This page runs all 8 modules sequentially to demonstrate the complete pipeline:
-1. **Data Input** - Load coordinates
-2. **Stellar Parameters** - Get Gaia DR3 data
-3. **Exoplanet Cross-Match** - Check NASA Exoplanet Archive
-4. **TESS Light Curves** - Retrieve observation data
-5. **Transit Detection** - Detect transits with BLS
-6. **Habitability Scoring** - Score habitability
-7. **Results Summary** - Generate summary
-8. **Data Export** - Export results
-""")
-
 # Sidebar controls
 st.sidebar.header("Pipeline Controls")
 
