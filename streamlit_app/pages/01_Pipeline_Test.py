@@ -31,30 +31,56 @@ st.set_page_config(
 st.title("🌍 ExoQ: Exoplanet Community Quest for Earth 2.0")
 st.markdown("---")
 
-# Sidebar controls
-st.sidebar.header("Pipeline Controls")
-
-n_stars = st.sidebar.slider("Number of stars", min_value=5, max_value=363, value=10, step=5)
-data_source = st.sidebar.selectbox(
-    "Data source",
-    ["Real K Dwarf Catalog", "Upload CSV", "Virgin List", "Vetted List", "Manual Entry"],
-    help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV. 'Upload CSV' lets you upload your own file.",
+# --- Sidebar: module navigation + links --------------------------------------
+st.sidebar.header("📚 Modules")
+st.sidebar.markdown(
+    "**▶ Module 1 — Data Input**  \n"
+    "🔒 Module 2 — Stellar Parameters  \n"
+    "🔒 Module 3 — Exoplanet Cross-Match  \n"
+    "🔒 Module 4 — TESS Light Curves  \n"
+    "🔒 Module 5 — Transit Detection  \n"
+    "🔒 Module 6 — Habitability Scoring  \n"
+    "🔒 Module 7 — Results Summary  \n"
+    "🔒 Module 8 — Data Export"
 )
+st.sidebar.caption(
+    "🔒 Modules 2–8 unlock after **6 months of membership** "
+    "*or* **12 contributed posts**."
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🔗 Links")
+st.sidebar.page_link("Home.py", label="🏠 Home")
+st.sidebar.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
+
+# --- Main page: Module 1 input controls --------------------------------------
+st.subheader("📥 Module 1 — Data Input")
+st.caption("Load and validate stellar coordinates for the ExoQ pipeline.")
+
+col_left, col_right = st.columns([2, 1])
+with col_left:
+    data_source = st.selectbox(
+        "Data source",
+        ["Real K Dwarf Catalog", "Upload CSV", "Virgin List", "Vetted List", "Manual Entry"],
+        help="'Real K Dwarf Catalog' loads validated K Dwarfs from the bundled CSV. 'Upload CSV' lets you upload your own file.",
+    )
+with col_right:
+    n_stars = st.slider("Number of stars", min_value=5, max_value=363, value=10, step=5)
+
 # Default catalog sampling to random; user-facing toggle removed.
 random_sample = True
 
 uploaded_file = None
+manual_text = ""
 if data_source == "Upload CSV":
-    uploaded_file = st.sidebar.file_uploader(
+    uploaded_file = st.file_uploader(
         "Upload CSV file",
         type=["csv"],
         help="CSV must contain at least 'ra' and 'dec' columns. Validated K Dwarf catalogs (with Teff, logg, RUWE, DR3Name, etc.) are auto-recognized.",
     )
-
-manual_text = ""
-if data_source == "Manual Entry":
-    manual_text = st.sidebar.text_area(
-        "Coordinates (one per line, RA,Dec)",
+elif data_source == "Manual Entry":
+    manual_text = st.text_area(
+        "Coordinates (one per line, RA, Dec)",
         value="150.0, 10.0\n200.0, -20.0\n250.0, 30.0",
         height=150,
         help="Enter one coordinate pair per line as 'RA, Dec' in decimal degrees. Lines starting with # are ignored.",
@@ -64,16 +90,21 @@ if data_source == "Manual Entry":
 # members-only Run Full Pipeline. No user-facing toggle is needed.
 use_mock = True
 
-run_module1 = st.sidebar.button("▶️ Run Module 1", type="primary")
-run_pipeline = st.sidebar.button(
-    "🚀 Run Full Pipeline",
-    disabled=True,
-    help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+btn_col1, btn_col2 = st.columns([1, 3])
+with btn_col1:
+    run_module1 = st.button("▶️ Run Module 1", type="primary", use_container_width=True)
+with btn_col2:
+    run_pipeline = st.button(
+        "🚀 Run Full Pipeline",
+        disabled=True,
+        help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+        use_container_width=True,
+    )
+st.caption(
+    "🔒 **Run Full Pipeline** is a members-only feature — "
+    "unlocks after **6 months of membership** *or* **12 contributed posts**."
 )
-st.sidebar.caption(
-    "🔒 **Run Full Pipeline** is a members-only feature.\n\n"
-    "Unlocks after **6 months of membership** *or* **12 contributed posts**."
-)
+st.markdown("---")
 
 # Initialize session state
 if 'pipeline_data' not in st.session_state:
@@ -105,7 +136,7 @@ if run_pipeline:
 
 # Show instruction if pipeline hasn't started
 if not st.session_state.pipeline_started:
-    st.info("👆 Click 'Run Module 1' in the sidebar to load and validate input data.")
+    st.info("👆 Configure the data source above and click **▶️ Run Module 1** to load and validate input data.")
 
 # Only run modules if pipeline has been started
 if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
@@ -123,7 +154,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 )
             elif data_source == "Upload CSV":
                 if uploaded_file is None:
-                    st.error("Please upload a CSV file in the sidebar before running the pipeline.")
+                    st.error("Please upload a CSV file above before running Module 1.")
                     st.stop()
                 # Persist the upload to a temp file so the loader can read it by path.
                 import tempfile
