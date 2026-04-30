@@ -45,16 +45,11 @@ st.sidebar.markdown(
 )
 st.sidebar.markdown("---")
 run_pipeline = st.sidebar.button(
-    "� Run Full Pipeline",
+    "🚀 Run Full Pipeline",
     disabled=True,
     help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
     use_container_width=True,
 )
-st.sidebar.caption(
-    "🔒 **Run Full Pipeline** is a members-only feature.\n\n"
-    "Unlocks after **6 months of membership** *or* **12 contributed posts**."
-)
-
 st.sidebar.markdown("---")
 st.sidebar.header("🔗 Links")
 st.sidebar.page_link("Home.py", label="🏠 Home")
