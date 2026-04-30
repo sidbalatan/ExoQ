@@ -556,23 +556,27 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 st.session_state.pipeline_data = data
 
             survivors = gold + silver
-            # 🎉 Celebration banner -------------------------------------------------
+            _hdr_style = "font-size: 1rem; font-weight: 600; margin: 0.4rem 0 0.1rem 0;"
+            # Celebration banner ---------------------------------------------------
             if failed == 0 and survivors == inputs and survivors > 0:
                 st.markdown(
-                    f"### 🎉 Congratulations! All **{survivors}** stars cleared the gauntlet — meet your **🌱 Survivors**!"
+                    f"<p style='{_hdr_style}'>All <b>{survivors}</b> stars cleared the GAIA Survival Test — meet your Survivors.</p>",
+                    unsafe_allow_html=True,
                 )
                 st.caption("They are now ready to continue the journey toward Earth 2.0.")
             elif survivors > 0:
                 st.markdown(
-                    f"### 🎉 **{survivors} of {inputs}** stars passed the GAIA Survival Test."
+                    f"<p style='{_hdr_style}'><b>{survivors} of {inputs}</b> stars passed the GAIA Survival Test.</p>",
+                    unsafe_allow_html=True,
                 )
                 st.caption(
-                    f"🔬 {failed} did not meet the K-Dwarf criteria and are flagged **Failed**. "
-                    f"The {survivors} **🌱 Survivors** below are ready for Modules 2–8."
+                    f"{failed} did not meet the K-Dwarf criteria and are flagged Failed. "
+                    f"The {survivors} survivors below are ready for Modules 2–8."
                 )
             else:
                 st.markdown(
-                    f"### ⚠️ None of the **{inputs}** input stars passed the GAIA Survival Test."
+                    f"<p style='{_hdr_style}'>None of the <b>{inputs}</b> input stars passed the GAIA Survival Test.</p>",
+                    unsafe_allow_html=True,
                 )
                 st.caption(
                     "Either the cross-match returned no Gaia DR3 data for these inputs, "
@@ -624,7 +628,11 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 'ruwe', 'bp_rp', 'tier',
             ]
             if all(c in data.columns for c in verify_cols):
-                st.markdown("### ✅ 100% Real, Live ESA Gaia DR3")
+                st.markdown(
+                    "<p style='font-size: 1rem; font-weight: 600; margin: 0.6rem 0 0.1rem 0;'>"
+                    "Live ESA Gaia DR3 verification</p>",
+                    unsafe_allow_html=True,
+                )
                 st.caption(
                     "These are the raw values returned by the live ADQL query against "
                     "`gaiadr3.gaia_source` joined with `gaiadr3.astrophysical_parameters`. "
