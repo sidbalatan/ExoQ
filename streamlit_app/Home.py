@@ -58,7 +58,15 @@ with st.popover("☰ Main Menu", use_container_width=False):
 
 # --- Main page: Module 1 input controls --------------------------------------
 st.subheader("📥 Module 1 — Data Input")
-st.caption("Load and validate stellar coordinates for the ExoQ pipeline.")
+st.markdown(
+    "**The starting line of your quest for Earth 2.0.**  \n"
+    "Hand the pipeline a list of sky coordinates — either upload a CSV "
+    "(any catalog with `ra` and `dec` columns; validated K Dwarf catalogs "
+    "are auto-recognized) or type RA/Dec pairs by hand. Module 1 will "
+    "ingest, sanity-check, and standardize them, then prepare the batch "
+    "for the **Gaia DR3 Survival Test** below. "
+    "Only the stars that survive move on to Modules 2–8."
+)
 
 col_left, col_right = st.columns([2, 1])
 with col_left:
