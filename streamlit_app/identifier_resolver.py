@@ -78,6 +78,23 @@ def normalize(token: str) -> str:
 # ------------------------------------------------------------------
 # Resolver
 # ------------------------------------------------------------------
+def _resolve_via_gaia_archive(source_id: int) -> Optional[Tuple[float, float]]:
+    """Look up a Gaia DR3 source_id directly in the Gaia archive."""
+    try:
+        from astroquery.gaia import Gaia  # noqa: WPS433
+
+        job = Gaia.launch_job(
+            f"SELECT TOP 1 ra, dec FROM gaiadr3.gaia_source "
+            f"WHERE source_id = {int(source_id)}"
+        )
+        df = job.get_results().to_pandas()
+    except Exception:
+        return None
+    if df.empty:
+        return None
+    return float(df.iloc[0]["ra"]), float(df.iloc[0]["dec"])
+
+
 @lru_cache(maxsize=10000)
 def resolve(token: str) -> Tuple[float, float, str]:
     """Resolve ``token`` to ``(ra_deg, dec_deg, resolved_label)``.
@@ -86,6 +103,15 @@ def resolve(token: str) -> Tuple[float, float, str]:
     """
     name = normalize(token)
     kind = classify(name)
+
+    # ---- Gaia DR3 IDs: hit the Gaia archive directly (most reliable) ----
+    if kind == "gaia":
+        m = re.search(r"gaia\s*dr\s*[123]\s+(\d+)", name, re.I) or re.search(r"^(\d{10,})$", name)
+        if m:
+            sid = int(m.group(1))
+            radec = _resolve_via_gaia_archive(sid)
+            if radec is not None:
+                return radec[0], radec[1], name
 
     # ---- Primary: Simbad -----------------------------------------
     try:

@@ -482,24 +482,8 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.session_state.pipeline_step = 1
             st.rerun()
         else:
-            survivors = int(st.session_state.get('m1_survivor_count', len(st.session_state.pipeline_data)))
-            inputs = int(st.session_state.get('m1_input_count', survivors))
-            ejected = max(inputs - survivors, 0)
-
-            # 🎉 Celebration banner -------------------------------------------------
-            if ejected > 0:
-                st.markdown(
-                    f"### 🎉 Congratulations! **{survivors} of {inputs}** stars survived the Gaia DR3 Survival Test."
-                )
-                st.caption(
-                    f"🔬 {ejected} did not meet the K-Dwarf criteria and were ejected. "
-                    f"The {survivors} **🌱 Survivors** below are ready for Modules 2–8."
-                )
-            else:
-                st.markdown(
-                    f"### 🎉 Congratulations! All **{survivors}** stars cleared the gauntlet — meet your **🌱 Survivors**!"
-                )
-                st.caption("They are now ready to continue the journey toward Earth 2.0.")
+            inputs = int(st.session_state.get('m1_input_count',
+                          len(st.session_state.pipeline_data)))
 
             # Re-derive the tier on the fly from the actual Gaia DR3 quality
             # columns. We deliberately ignore the CSV's `validation_tier`
@@ -564,8 +548,32 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 data['tier'] = tier_series
                 st.session_state.pipeline_data = data
 
+            survivors = gold + silver
+            # 🎉 Celebration banner -------------------------------------------------
+            if failed == 0 and survivors == inputs and survivors > 0:
+                st.markdown(
+                    f"### 🎉 Congratulations! All **{survivors}** stars cleared the gauntlet — meet your **🌱 Survivors**!"
+                )
+                st.caption("They are now ready to continue the journey toward Earth 2.0.")
+            elif survivors > 0:
+                st.markdown(
+                    f"### 🎉 **{survivors} of {inputs}** stars passed the GAIA Survival Test."
+                )
+                st.caption(
+                    f"🔬 {failed} did not meet the K-Dwarf criteria and are flagged **Failed**. "
+                    f"The {survivors} **🌱 Survivors** below are ready for Modules 2–8."
+                )
+            else:
+                st.markdown(
+                    f"### ⚠️ None of the **{inputs}** input stars passed the GAIA Survival Test."
+                )
+                st.caption(
+                    "Either the cross-match returned no Gaia DR3 data for these inputs, "
+                    "or every entry was flagged Failed by the K-Dwarf cuts."
+                )
+
             tcol1, tcol2, tcol3 = st.columns(3)
-            tcol1.metric("� Gaia Certified K Dwarf", gold)
+            tcol1.metric("🥇 Gaia Certified K Dwarf", gold)
             tcol2.metric("🥈 Need Follow Up",         silver)
             tcol3.metric("🥉 Failed",                  failed)
 
