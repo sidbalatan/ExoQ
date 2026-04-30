@@ -577,7 +577,29 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             tcol2.metric("🥈 Need Follow Up",         silver)
             tcol3.metric("🥉 Failed",                  failed)
 
-            st.success(st.session_state.summaries.get('module1', 'Module 1: Data Input | 1 of 8 Complete!'))
+            # Replace the legacy module1 'success' summary (which only validates
+            # RA/Dec ranges and would mis-report "100% pass rate" even when
+            # rows fail the K-Dwarf cuts) with a truthful tier-based summary.
+            pass_pct = (100.0 * survivors / inputs) if inputs else 0.0
+            if survivors == inputs and inputs > 0:
+                st.success(
+                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"All {inputs} stars passed the GAIA DR3 Survival Test "
+                    f"({gold} Certified, {silver} Need Follow Up). Ready for Module 2."
+                )
+            elif survivors > 0:
+                st.success(
+                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"{survivors} of {inputs} stars passed the GAIA DR3 Survival Test "
+                    f"({pass_pct:.0f}% pass rate \u2014 {gold} Certified, {silver} Need Follow Up, "
+                    f"{failed} Failed). Survivors continue to Module 2."
+                )
+            else:
+                st.warning(
+                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"0 of {inputs} stars passed the GAIA DR3 Survival Test \u2014 "
+                    f"all {failed} were flagged Failed. Review the inputs before continuing."
+                )
 
             # Preview the survivor table (richer column set when available).
             preview_cols = [c for c in [
