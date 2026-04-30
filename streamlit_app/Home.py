@@ -97,7 +97,62 @@ elif data_source == "Manual Entry":
 # members-only Run Full Pipeline. No user-facing toggle is needed.
 use_mock = True
 
-run_module1 = st.button("▶️ Run Module 1", type="primary")
+with st.expander("🧬 What happens when you click Run Module 1? — *The Gaia DR3 Survival Test*", expanded=True):
+    st.markdown(
+        "Your coordinates are pushed against **ESA Gaia DR3** "
+        "(*1.8 billion stars, the most precise stellar census ever made*) "
+        "and forced through a gauntlet of quality filters. "
+        "Just like life on Earth 1.0, only the fittest stars make it to the next stage. "
+        "We call the ones that pass **🌱 Survivors** — they are the K Dwarfs worth pursuing in our "
+        "quest for **Earth 2.0**."
+    )
+
+    st.markdown("##### 🛡️ Survival criteria")
+    crit_left, crit_right = st.columns(2)
+    with crit_left:
+        st.markdown(
+            "- **Effective temperature** — *Teff*  \n"
+            "  &nbsp;&nbsp;`3,900 K ≤ Teff ≤ 5,300 K`  \n"
+            "  *Goldilocks zone for K-type stars: not too hot (G), not too cold (M).*\n"
+            "\n"
+            "- **Surface gravity** — *log g*  \n"
+            "  &nbsp;&nbsp;`log g ≥ 4.0`  \n"
+            "  *Compact dwarfs only — bloated red giants are ejected.*\n"
+            "\n"
+            "- **Astrometric quality** — *RUWE*  \n"
+            "  &nbsp;&nbsp;`RUWE < 1.4`  \n"
+            "  *Clean single-star solution; suspected unresolved binaries fail.*"
+        )
+    with crit_right:
+        st.markdown(
+            "- **Color index** — *BP − RP*  \n"
+            "  &nbsp;&nbsp;`1.1 ≤ BP − RP ≤ 2.6`  \n"
+            "  *The orange-red glow of a true K Dwarf.*\n"
+            "\n"
+            "- **Distance** — *parallax-based*  \n"
+            "  &nbsp;&nbsp;`Plx > 0`, finite  \n"
+            "  *Must have a real, measurable distance.*\n"
+            "\n"
+            "- **Cleanliness flags** — *contaminants out*  \n"
+            "  &nbsp;&nbsp;`flag_giant = False`  \n"
+            "  &nbsp;&nbsp;`flag_mdwarf = False`  \n"
+            "  &nbsp;&nbsp;`contaminant = False`"
+        )
+
+    st.markdown(
+        "##### 🏷️ Validation tiers\n"
+        "Each Survivor is also stamped with a confidence tier based on how cleanly it cleared the gauntlet:\n"
+        "- 🥇 **Gold** — passed every cut with margin to spare\n"
+        "- 🥈 **Silver** — passed with minor borderline values\n"
+        "- 🥉 **Bronze** — passed but sits near a threshold (worth a second look)"
+    )
+    st.caption(
+        "When this run finishes, you'll see how many of your input stars made it through the gauntlet — "
+        "the **Survivors** — along with their Gaia DR3 IDs, K subtype, and validation tier. "
+        "Only Survivors continue to Modules 2–8."
+    )
+
+run_module1 = st.button("▶️ Run Module 1 — Begin the Survival Test", type="primary")
 st.markdown("---")
 
 # Initialize session state
