@@ -87,15 +87,28 @@ class HabitabilityScoringModule:
         """
         logger.info("Scoring stellar habitability")
         
+        # Check if df is a DataFrame
+        if not isinstance(df, pd.DataFrame):
+            logger.warning(f"Input is not a DataFrame: {type(df)}")
+            return df
+        
         # Initialize stellar habitability score
-        df['stellar_hab_score'] = 0.0
+        try:
+            df['stellar_hab_score'] = 0.0
+        except Exception as e:
+            logger.error(f"Error adding stellar_hab_score column: {e}")
+            return df
         
         # Check if required columns exist
         required_cols = ['teff_gspphot', 'logg_gspphot', 'ruwe']
         missing_cols = []
-        for col in required_cols:
-            if col not in df.columns:
-                missing_cols.append(col)
+        try:
+            for col in required_cols:
+                if col not in df.columns:
+                    missing_cols.append(col)
+        except Exception as e:
+            logger.error(f"Error checking columns: {e}")
+            missing_cols = required_cols
         
         if missing_cols:
             logger.warning(f"Missing columns for stellar habitability: {missing_cols}")
