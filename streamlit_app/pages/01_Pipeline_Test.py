@@ -82,7 +82,11 @@ run_module1 = st.sidebar.button("▶️ Run Module 1", type="primary")
 run_pipeline = st.sidebar.button(
     "🚀 Run Full Pipeline",
     disabled=True,
-    help="Disabled while we focus on Module 1. Will be re-enabled once all modules are wired up.",
+    help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+)
+st.sidebar.caption(
+    "🔒 **Run Full Pipeline** is a members-only feature.\n\n"
+    "Unlocks after **6 months of membership** *or* **12 contributed posts**."
 )
 
 # Initialize session state
