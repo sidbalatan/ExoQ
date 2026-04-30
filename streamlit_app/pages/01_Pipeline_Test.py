@@ -25,35 +25,37 @@ from modules.module8_data_export import DataExportModule
 st.set_page_config(
     page_title="ExoQ: Exoplanet Community Quest for Earth 2.0",
     page_icon="🌍",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 st.title("🌍 ExoQ: Exoplanet Community Quest for Earth 2.0")
 st.markdown("---")
 
-# --- Sidebar: module navigation + links --------------------------------------
-st.sidebar.header("📚 Modules")
-st.sidebar.markdown(
-    "**▶ Module 1 — Data Input**  \n"
-    "🔒 Module 2 — Stellar Parameters  \n"
-    "🔒 Module 3 — Exoplanet Cross-Match  \n"
-    "🔒 Module 4 — TESS Light Curves  \n"
-    "🔒 Module 5 — Transit Detection  \n"
-    "🔒 Module 6 — Habitability Scoring  \n"
-    "🔒 Module 7 — Results Summary  \n"
-    "🔒 Module 8 — Data Export"
-)
-st.sidebar.markdown("---")
-run_pipeline = st.sidebar.button(
-    "🚀 Run Full Pipeline",
-    disabled=True,
-    help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
-    use_container_width=True,
-)
-st.sidebar.markdown("---")
-st.sidebar.header("🔗 Links")
-st.sidebar.page_link("Home.py", label="🏠 Home")
-st.sidebar.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
+# --- Main Menu (mobile-first dropdown replaces the sidebar) ------------------
+with st.popover("☰ Main Menu", use_container_width=False):
+    st.markdown("#### 📚 Modules")
+    st.markdown(
+        "**▶ Module 1 — Data Input**  \n"
+        "🔒 Module 2 — Stellar Parameters  \n"
+        "🔒 Module 3 — Exoplanet Cross-Match  \n"
+        "🔒 Module 4 — TESS Light Curves  \n"
+        "🔒 Module 5 — Transit Detection  \n"
+        "🔒 Module 6 — Habitability Scoring  \n"
+        "🔒 Module 7 — Results Summary  \n"
+        "🔒 Module 8 — Data Export"
+    )
+    st.markdown("---")
+    run_pipeline = st.button(
+        "🚀 Run Full Pipeline",
+        disabled=True,
+        help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+        use_container_width=True,
+    )
+    st.markdown("---")
+    st.markdown("#### 🔗 Links")
+    st.page_link("Home.py", label="🏠 Home")
+    st.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
 
 # --- Main page: Module 1 input controls --------------------------------------
 st.subheader("📥 Module 1 — Data Input")
