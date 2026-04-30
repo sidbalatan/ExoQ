@@ -160,13 +160,17 @@ with input_left:
             "Lines starting with # are ignored."
         ),
     )
+    if st.button(
+        "📋 Validate & Preview Identifiers",
+        key="m1_validate_btn",
+        type="primary",
+    ):
+        st.session_state["m1_show_manual_preview"] = True
     st.caption(
         "ℹ️ The lines above are samples. **Delete them and paste in your own** "
         "RA/Dec pairs *or* catalog IDs (Gaia DR3 / TIC / KIC / EPIC / 2MASS / HD / HIP / TYC) "
         "before clicking *Run Module 1*."
     )
-    if st.button("📋 Validate & Preview Identifiers", key="m1_validate_btn"):
-        st.session_state["m1_show_manual_preview"] = True
     if st.session_state.get("m1_show_manual_preview"):
         with st.spinner("Resolving identifiers via Simbad / MAST …"):
             preview_rows, preview_unresolved = parse_manual_input(manual_text)
