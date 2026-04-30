@@ -183,6 +183,9 @@ with input_left:
                 use_container_width=True,
                 height=min(35 + 35 * len(preview_rows), 250),
             )
+            st.markdown(
+                "### 👇 CLICK THE RUN GAIA SURVIVAL TEST BUTTON LOCATED BELOW"
+            )
         if preview_unresolved:
             st.warning(
                 "Could not resolve **" + str(len(preview_unresolved)) + "** line(s): "
