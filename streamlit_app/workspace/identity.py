@@ -17,6 +17,7 @@ import streamlit as st
 from email_validator import validate_email, EmailNotValidError
 
 from .store import get_store, normalize_user_id, hash_password, verify_password_hash
+from .email_service import generate_verification_code, send_verification_email
 
 
 SESSION_KEY = "exoq_user_id"
@@ -94,6 +95,14 @@ def _sign_in_form(form_key: str = "exoq_signin_form") -> None:
         st.error("Incorrect password.")
         return
 
+    # Check if email is verified
+    if not store.is_email_verified(uid):
+        st.error(
+            f"Your email address is not verified. Please check your email for the verification code, "
+            f"or sign up again to receive a new code."
+        )
+        return
+
     _set_session(uid, email)
     st.success(f"Welcome back, {email}.")
     st.rerun()
@@ -101,6 +110,75 @@ def _sign_in_form(form_key: str = "exoq_signin_form") -> None:
 
 def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
     """Form: brand-new account with email, password, and optional PIN."""
+    # Check if we're in verification step
+    if f"{form_key}_pending_email" in st.session_state:
+        pending_data = st.session_state[f"{form_key}_pending_data"]
+        pending_email = pending_data["email"]
+        pending_uid = pending_data["uid"]
+        pending_password_hash = pending_data["password_hash"]
+        pending_pin = pending_data.get("pin")
+        
+        st.info(f"A verification code has been sent to **{pending_email}**. Please enter it below to complete your registration.")
+        
+        # Show error if email failed previously
+        if st.session_state.get(f"{form_key}_email_failed"):
+            st.error("Failed to send verification email. You can try resending below.")
+        
+        verification_code = st.text_input(
+            "Verification Code",
+            max_chars=6,
+            key=f"{form_key}_verification_code",
+            help="Enter the 6-digit code sent to your email.",
+        )
+        
+        col_verify, col_cancel = st.columns([1, 1])
+        with col_verify:
+            if st.button("Verify", key=f"{form_key}_verify", type="primary"):
+                store = get_store()
+                # Check code without requiring existing user
+                if store.verify_code(pending_uid, verification_code):
+                    # Now create the user after verification
+                    store.create_user(pending_uid, pending_email, pending_password_hash, pending_pin)
+                    store.set_email_verified(pending_uid, True)
+                    # Clean up pending verification file
+                    store.cleanup_pending_verification(pending_uid)
+                    _set_session(pending_uid, pending_email)
+                    # Clear pending state
+                    st.session_state.pop(f"{form_key}_pending_email", None)
+                    st.session_state.pop(f"{form_key}_pending_uid", None)
+                    st.session_state.pop(f"{form_key}_pending_data", None)
+                    st.session_state.pop(f"{form_key}_email_failed", None)
+                    st.success(
+                        f"Account created for `{pending_email}`. Your runs will save to your private workspace."
+                    )
+                    st.rerun()
+                else:
+                    st.error("Invalid or expired verification code.")
+        
+        with col_cancel:
+            if st.button("Cancel", key=f"{form_key}_cancel"):
+                st.session_state.pop(f"{form_key}_pending_email", None)
+                st.session_state.pop(f"{form_key}_pending_uid", None)
+                st.session_state.pop(f"{form_key}_pending_data", None)
+                st.session_state.pop(f"{form_key}_email_failed", None)
+                st.rerun()
+        
+        # Resend option - always show this
+        st.markdown("---")
+        if st.button("Resend verification code", key=f"{form_key}_resend"):
+            new_code = generate_verification_code()
+            store = get_store()
+            store.store_verification_code(pending_uid, new_code)
+            if send_verification_email(pending_email, new_code):
+                st.session_state.pop(f"{form_key}_email_failed", None)
+                st.success("New verification code sent! Check your email.")
+            else:
+                st.session_state[f"{form_key}_email_failed"] = True
+                st.error("Failed to send email. Please check your Gmail configuration.")
+        
+        return
+    
+    # Initial sign-up form
     with st.form(form_key, clear_on_submit=False, border=False):
         email = st.text_input(
             "Email",
@@ -166,11 +244,29 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
         return
 
     password_hash = hash_password(password)
-    store.create_user(uid, email, password_hash, pin if pin else None)
-    _set_session(uid, email)
-    st.success(
-        f"Account created for `{email}`. Your runs will save to your private workspace."
-    )
+    
+    # Generate and store verification code (before creating user)
+    verification_code = generate_verification_code()
+    store = get_store()
+    store.store_verification_code(uid, verification_code)
+    
+    # Store all pending registration data in session state
+    st.session_state[f"{form_key}_pending_email"] = email
+    st.session_state[f"{form_key}_pending_uid"] = uid
+    st.session_state[f"{form_key}_pending_data"] = {
+        "uid": uid,
+        "email": email,
+        "password_hash": password_hash,
+        "pin": pin if pin else None
+    }
+    
+    # Try to send verification email
+    if send_verification_email(email, verification_code):
+        st.success(f"Verification code sent to {email}. Please check your email.")
+    else:
+        st.session_state[f"{form_key}_email_failed"] = True
+        st.error("Failed to send verification email. Check your Gmail configuration below, then click Resend.")
+    
     st.rerun()
 
 

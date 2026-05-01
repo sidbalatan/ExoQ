@@ -277,6 +277,7 @@ class LocalFileStore:
                 "user_id": uid,
                 "email": email,
                 "password_hash": password_hash,
+                "email_verified": False,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "schema_version": SCHEMA_VERSION,
             }
@@ -331,6 +332,114 @@ class LocalFileStore:
             return profile.get("email")
         except Exception:
             return None
+
+    def is_email_verified(self, user_id: str) -> bool:
+        """Check if a user's email is verified."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return False
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            return profile.get("email_verified", False)
+        except Exception:
+            return False
+
+    def set_email_verified(self, user_id: str, verified: bool = True) -> None:
+        """Set the email verification status for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            profile["email_verified"] = verified
+            prof.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _pending_verification_path(self, user_id: str) -> Path:
+        """Path to pending verification file for users not yet created."""
+        uid = normalize_user_id(user_id)
+        return self.root / f"pending_verification_{uid}.json"
+
+    def store_verification_code(self, user_id: str, code: str) -> None:
+        """Store a verification code with timestamp."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        
+        # If user exists, store in profile
+        if prof.exists():
+            try:
+                profile = json.loads(prof.read_text(encoding="utf-8"))
+                profile["verification_code"] = code
+                profile["verification_code_issued_at"] = datetime.now(timezone.utc).isoformat()
+                prof.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+                return
+            except Exception:
+                pass
+        
+        # Otherwise, store in pending verification file
+        pending_file = self._pending_verification_path(uid)
+        try:
+            data = {
+                "verification_code": code,
+                "verification_code_issued_at": datetime.now(timezone.utc).isoformat(),
+            }
+            pending_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def verify_code(self, user_id: str, code: str) -> bool:
+        """Verify a verification code."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        
+        # Try to get code from profile (existing user) or pending file (new user)
+        stored_code = None
+        issued_at = None
+        
+        if prof.exists():
+            try:
+                profile = json.loads(prof.read_text(encoding="utf-8"))
+                stored_code = profile.get("verification_code")
+                issued_at = profile.get("verification_code_issued_at")
+            except Exception:
+                pass
+        else:
+            # Check pending verification file
+            pending_file = self._pending_verification_path(uid)
+            if pending_file.exists():
+                try:
+                    data = json.loads(pending_file.read_text(encoding="utf-8"))
+                    stored_code = data.get("verification_code")
+                    issued_at = data.get("verification_code_issued_at")
+                except Exception:
+                    pass
+        
+        if not stored_code or not issued_at:
+            return False
+        
+        # Check if code matches
+        if stored_code != code:
+            return False
+        
+        # Check if expired (15 minutes)
+        from .email_service import is_code_expired
+        if is_code_expired(issued_at):
+            return False
+        
+        return True
+
+    def cleanup_pending_verification(self, user_id: str) -> None:
+        """Clean up pending verification file after successful registration."""
+        uid = normalize_user_id(user_id)
+        pending_file = self._pending_verification_path(uid)
+        if pending_file.exists():
+            try:
+                pending_file.unlink()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------

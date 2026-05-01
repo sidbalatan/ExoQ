@@ -10,6 +10,11 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
 from workspace import auth_strip, current_user, sign_in_widget, get_store
