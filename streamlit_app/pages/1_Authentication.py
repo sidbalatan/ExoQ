@@ -7,7 +7,7 @@ can stay free of auth popovers. Linked from the topnav `Sign in` and
 
 import streamlit as st
 
-from workspace import sign_in_widget, current_user, current_display_name
+from workspace import sign_in_widget, current_user, current_email
 from workspace.identity import sign_out
 
 st.set_page_config(
@@ -50,17 +50,18 @@ st.markdown(
 
 st.markdown("# 🔑 Sign in to ExoQ")
 st.caption(
-    "Pick a display name to create your private workspace, or sign back "
-    "in to an existing account. ExoQ uses a lightweight username-only "
-    "identity so each user gets a stable folder for their saved runs."
+    "Enter your email and password to create your private workspace, or sign back "
+    "in to an existing account. ExoQ uses email-based identity with optional PIN "
+    "verification so each user gets a secure folder for their saved runs."
 )
 
 st.markdown("---")
 
 uid = current_user()
 if uid:
+    email = current_email() or uid
     st.success(
-        f"You are signed in as **{current_display_name() or uid}** "
+        f"You are signed in as **{email}** "
         f"(`{uid}`). Your runs save to your private workspace."
     )
     col_a, col_b = st.columns([1, 3])

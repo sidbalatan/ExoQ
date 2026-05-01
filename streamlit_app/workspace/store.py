@@ -27,6 +27,7 @@ Design choices that keep us forward-compatible
 
 from __future__ import annotations
 
+import bcrypt
 import json
 import os
 import re
@@ -88,7 +89,10 @@ class WorkspaceStore(Protocol):
     def load_run(self, user_id: str, run_id: str) -> RunRecord: ...
     def delete_run(self, user_id: str, run_id: str) -> None: ...
     def user_exists(self, user_id: str) -> bool: ...
-    def create_user(self, user_id: str, display_name: str = "") -> None: ...
+    def create_user(self, user_id: str, email: str, password_hash: str, pin: Optional[str] = None) -> None: ...
+    def verify_password(self, user_id: str, password: str) -> bool: ...
+    def verify_pin(self, user_id: str, pin: str) -> bool: ...
+    def get_user_email(self, user_id: str) -> Optional[str]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -98,16 +102,28 @@ _USER_ID_RE = re.compile(r"[^a-z0-9_-]+")
 
 
 def normalize_user_id(raw: str) -> str:
-    """Sanitise a free-text username into a filesystem-safe identifier.
+    """Sanitise an email into a filesystem-safe identifier.
 
-    >>> normalize_user_id('Sid Balatan!')
-    'sid_balatan'
+    >>> normalize_user_id('user@example.com')
+    'user_example_com'
     """
     if not raw:
         return ""
-    s = raw.strip().lower().replace(" ", "_")
+    s = raw.strip().lower().replace("@", "_").replace(".", "_")
     s = _USER_ID_RE.sub("", s)
     return s[:64] or ""
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+
+def verify_password_hash(password: str, hashed: str) -> bool:
+    """Verify a password against a bcrypt hash."""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 
 def new_run_id() -> str:
@@ -239,7 +255,7 @@ class LocalFileStore:
             return False
         return (self.root / uid / "profile.json").exists()
 
-    def create_user(self, user_id: str, display_name: str = "") -> None:
+    def create_user(self, user_id: str, email: str, password_hash: str, pin: Optional[str] = None) -> None:
         """Create the profile marker for a new account.
 
         Idempotent: writing twice keeps the original ``created_at`` so the
@@ -259,14 +275,62 @@ class LocalFileStore:
         else:
             existing = {
                 "user_id": uid,
-                "display_name": display_name or uid,
+                "email": email,
+                "password_hash": password_hash,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "schema_version": SCHEMA_VERSION,
             }
-        # Allow display_name updates without resetting created_at.
-        if display_name:
-            existing["display_name"] = display_name
+        # Allow email and password updates without resetting created_at.
+        if email:
+            existing["email"] = email
+        if password_hash:
+            existing["password_hash"] = password_hash
+        if pin is not None:
+            existing["pin"] = pin
         prof.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+
+    def verify_password(self, user_id: str, password: str) -> bool:
+        """Verify a password against the stored hash."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return False
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            stored_hash = profile.get("password_hash")
+            if not stored_hash:
+                return False
+            return verify_password_hash(password, stored_hash)
+        except Exception:
+            return False
+
+    def verify_pin(self, user_id: str, pin: str) -> bool:
+        """Verify a PIN against the stored value."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return False
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            stored_pin = profile.get("pin")
+            if not stored_pin:
+                # No PIN set means PIN verification is not required
+                return True
+            return stored_pin == pin
+        except Exception:
+            return False
+
+    def get_user_email(self, user_id: str) -> Optional[str]:
+        """Get the email for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return None
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            return profile.get("email")
+        except Exception:
+            return None
 
 
 # ---------------------------------------------------------------------------

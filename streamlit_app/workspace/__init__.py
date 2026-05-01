@@ -8,7 +8,7 @@ the filesystem directly; they go through this protocol so swapping
 backends is a one-line config change.
 """
 
-from .identity import auth_strip, current_display_name, current_user, sign_in_widget
+from .identity import auth_strip, current_email, current_user, sign_in_widget
 from .store import (
     LocalFileStore,
     RunMeta,
@@ -23,7 +23,7 @@ __all__ = [
     "RunRecord",
     "WorkspaceStore",
     "get_store",
-    "current_display_name",
+    "current_email",
     "current_user",
     "sign_in_widget",
     "auth_strip",

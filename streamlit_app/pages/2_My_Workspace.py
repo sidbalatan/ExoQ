@@ -22,8 +22,7 @@ APP_ROOT = HERE.parents[1]  # streamlit_app/
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from workspace import current_user, sign_in_widget, get_store  # noqa: E402
-from workspace.identity import current_display_name  # noqa: E402
+from workspace import current_user, sign_in_widget, get_store, current_email  # noqa: E402
 
 st.set_page_config(page_title="My Workspace · ExoQ", page_icon="👤", layout="wide", initial_sidebar_state="collapsed")
 
@@ -66,18 +65,20 @@ st.caption(
 )
 
 with st.popover("☰ Main Menu", use_container_width=False):
+    st.page_link("Home.py", label="🏠 Home")
+    st.markdown("---")
     sign_in_widget()
 
 uid = current_user()
 if not uid:
     st.info(
-        "You are not signed in. Open **☰ Main Menu** above and pick a display name "
+        "You are not signed in. Open **☰ Main Menu** above and sign in with your email "
         "to start saving your runs."
     )
     st.stop()
 
 st.caption(
-    f"Signed in as **{current_display_name() or uid}** "
+    f"Signed in as **{current_email() or uid}** "
     f"(`{uid}`). Runs below are private to your workspace folder."
 )
 

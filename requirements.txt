@@ -29,6 +29,8 @@ psycopg2-binary>=2.9.0
 # Authentication & API
 requests>=2.32.5
 python-dotenv>=1.2.2
+bcrypt>=4.2.0
+email-validator>=2.2.0
 
 # Utilities
 python-dateutil>=2.9.0

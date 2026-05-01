@@ -156,6 +156,13 @@ with menu_col:
     with st.popover("☰ Main Menu", use_container_width=False):
         sign_in_widget()
         st.page_link("pages/1_Authentication.py", label="Create an Account")
+        from workspace.identity import sign_out
+        from workspace import current_user
+        if current_user():
+            st.markdown("---")
+            if st.button("Sign out", key="main_menu_signout"):
+                sign_out()
+                st.rerun()
         st.markdown("---")
         st.markdown("#### 📚 Modules")
         st.markdown(
@@ -188,7 +195,7 @@ st.markdown(
     "Hand the pipeline a list of sky coordinates — upload a CSV or type "
     "RA/Dec pairs by hand."
 )
-with st.expander("READ MORE: The Input Process"):
+with st.expander("READ MORE: The Input Process . . ."):
     st.markdown(
         "Module 1 accepts any CSV with `ra` and `dec` columns. Validated K Dwarf "
         "catalogs (those with `DR3Name`, `Teff`, `logg`, `RUWE`, etc.) are "

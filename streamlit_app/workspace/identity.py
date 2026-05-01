@@ -14,12 +14,13 @@ from __future__ import annotations
 from typing import Optional
 
 import streamlit as st
+from email_validator import validate_email, EmailNotValidError
 
-from .store import get_store, normalize_user_id
+from .store import get_store, normalize_user_id, hash_password, verify_password_hash
 
 
 SESSION_KEY = "exoq_user_id"
-SESSION_DISPLAY_KEY = "exoq_user_display_name"
+SESSION_EMAIL_KEY = "exoq_user_email"
 
 
 # ---------------------------------------------------------------------------
@@ -30,92 +31,145 @@ def current_user() -> Optional[str]:
     return st.session_state.get(SESSION_KEY)
 
 
-def current_display_name() -> str:
-    """Return the user's chosen display name (free text)."""
-    return st.session_state.get(SESSION_DISPLAY_KEY, "")
+def current_email() -> str:
+    """Return the user's email address."""
+    return st.session_state.get(SESSION_EMAIL_KEY, "")
 
 
 def sign_out() -> None:
     """Clear the in-session identity. Per-user files are left intact on disk."""
     st.session_state.pop(SESSION_KEY, None)
-    st.session_state.pop(SESSION_DISPLAY_KEY, None)
+    st.session_state.pop(SESSION_EMAIL_KEY, None)
 
 
-def _set_session(uid: str, display_name: str) -> None:
+def _set_session(uid: str, email: str) -> None:
     st.session_state[SESSION_KEY] = uid
-    st.session_state[SESSION_DISPLAY_KEY] = display_name
+    st.session_state[SESSION_EMAIL_KEY] = email
 
 
 # ---------------------------------------------------------------------------
 # Forms
 # ---------------------------------------------------------------------------
 def _sign_in_form(form_key: str = "exoq_signin_form") -> None:
-    """Form: existing-account login. Refuses unknown user_ids."""
+    """Form: existing-account login using email and password."""
     with st.form(form_key, clear_on_submit=False, border=False):
-        name = st.text_input(
-            "Display name",
-            placeholder="e.g. Sid Balatan",
-            key=f"{form_key}_input",
-            help="The name you used when you signed up.",
+        email = st.text_input(
+            "Email",
+            placeholder="you@example.com",
+            key=f"{form_key}_email",
+            help="The email you used when you signed up.",
+        )
+        password = st.text_input(
+            "Password",
+            type="password",
+            key=f"{form_key}_password",
+            help="Your account password.",
         )
         submitted = st.form_submit_button("Sign in", type="primary")
 
     if not submitted:
         return
 
-    uid = normalize_user_id(name)
+    # Validate email format
+    try:
+        validate_email(email)
+    except EmailNotValidError:
+        st.error("Please enter a valid email address.")
+        return
+
+    uid = normalize_user_id(email)
     if not uid:
-        st.warning("Pick a name with at least one letter or digit.")
+        st.warning("Invalid email address.")
         return
 
     store = get_store()
     if not store.user_exists(uid):
         st.error(
-            f"No account found for `{uid}`. "
-            f"Use **Sign up** to create one (it takes one click)."
+            f"No account found for `{email}`. "
+            f"Use **Sign up** to create one."
         )
         return
 
-    _set_session(uid, name.strip())
-    st.success(f"Welcome back, {name.strip() or uid}.")
+    if not store.verify_password(uid, password):
+        st.error("Incorrect password.")
+        return
+
+    _set_session(uid, email)
+    st.success(f"Welcome back, {email}.")
     st.rerun()
 
 
 def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
-    """Form: brand-new account. Refuses if the user_id already exists."""
+    """Form: brand-new account with email, password, and optional PIN."""
     with st.form(form_key, clear_on_submit=False, border=False):
-        name = st.text_input(
-            "Display name",
-            placeholder="e.g. Sid Balatan",
-            key=f"{form_key}_input",
-            help=(
-                "We turn this into a filesystem-safe user_id "
-                "(lowercase, underscores, hyphens). Pick something "
-                "you'll remember -- you'll use the same name to sign in."
-            ),
+        email = st.text_input(
+            "Email",
+            placeholder="you@example.com",
+            key=f"{form_key}_email",
+            help="Your email will be your login identifier.",
+        )
+        password = st.text_input(
+            "Password",
+            type="password",
+            key=f"{form_key}_password",
+            help="Choose a strong password (min 8 characters).",
+        )
+        confirm_password = st.text_input(
+            "Confirm Password",
+            type="password",
+            key=f"{form_key}_confirm_password",
+        )
+        pin = st.text_input(
+            "PIN (optional)",
+            type="password",
+            max_chars=6,
+            key=f"{form_key}_pin",
+            help="Optional 6-digit PIN for extra security.",
         )
         submitted = st.form_submit_button("Create account", type="primary")
 
     if not submitted:
         return
 
-    uid = normalize_user_id(name)
+    # Validate email format
+    try:
+        validate_email(email)
+    except EmailNotValidError:
+        st.error("Please enter a valid email address.")
+        return
+
+    uid = normalize_user_id(email)
     if not uid:
-        st.warning("Pick a name with at least one letter or digit.")
+        st.warning("Invalid email address.")
+        return
+
+    # Validate password
+    if len(password) < 8:
+        st.error("Password must be at least 8 characters.")
+        return
+
+    if password != confirm_password:
+        st.error("Passwords do not match.")
+        return
+
+    # Validate PIN if provided
+    if pin and (not pin.isdigit() or len(pin) != 6):
+        st.error("PIN must be exactly 6 digits.")
         return
 
     store = get_store()
     if store.user_exists(uid):
         st.error(
-            f"An account already exists for `{uid}`. "
+            f"An account already exists for `{email}`. "
             f"Use **Sign in** instead."
         )
         return
 
-    store.create_user(uid, display_name=name.strip())
-    _set_session(uid, name.strip())
+    password_hash = hash_password(password)
+    store.create_user(uid, email, password_hash, pin if pin else None)
+    _set_session(uid, email)
     st.success(
-        f"Account created for `{uid}`. Your runs will save to your private workspace."
+        f"Account created for `{email}`. Your runs will save to your private workspace."
     )
     st.rerun()
 
@@ -127,7 +181,7 @@ def auth_strip() -> None:
     """Minimal inline auth strip: text links to the Authentication page.
 
     * When signed out -> plain text links: "Sign in | Create an Account"
-    * When signed in -> "Signed in as <name>" + Sign out button
+    * When signed in -> "Signed in as <email>" + Sign out button
     """
     # Keep the row horizontal and right-aligned.
     st.markdown(
@@ -185,17 +239,11 @@ def auth_strip() -> None:
     with st.container(key="exoq_auth"):
         uid = current_user()
         if uid:
-            display = current_display_name() or uid
-            c_text, c_btn = st.columns([10, 2])
-            with c_text:
-                st.markdown(
-                    f"<span style='font-size: 0.75rem; color: #6b7280;'>Signed in as <b style='color: #374151;'>{display}</b></span>",
-                    unsafe_allow_html=True,
-                )
-            with c_btn:
-                if st.button("Sign out", key="exoq_signout_btn"):
-                    sign_out()
-                    st.rerun()
+            email = current_email() or uid
+            st.markdown(
+                f"<span style='font-size: 0.75rem; color: #6b7280;'>Signed in as <b style='color: #374151;'>{email}</b></span>",
+                unsafe_allow_html=True,
+            )
             return
 
         # Signed out: single compact link.
@@ -206,13 +254,11 @@ def sign_in_widget(*, location_label: str = "👤 Sign in") -> None:
     """Stacked Sign in / Sign up tabs. Used by the My Workspace page."""
     uid = current_user()
     if uid:
+        email = current_email() or uid
         st.markdown(
             f"**{location_label}** &nbsp;·&nbsp; "
-            f"signed in as `{current_display_name() or uid}` (`{uid}`)"
+            f"signed in as `{email}` (`{uid}`)"
         )
-        if st.button("Sign out", key="exoq_signout_btn_legacy"):
-            sign_out()
-            st.rerun()
         return
 
     st.markdown(f"**{location_label}**")
