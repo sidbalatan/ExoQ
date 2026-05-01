@@ -25,7 +25,38 @@ if str(APP_ROOT) not in sys.path:
 from workspace import current_user, sign_in_widget, get_store  # noqa: E402
 from workspace.identity import current_display_name  # noqa: E402
 
-st.set_page_config(page_title="My Workspace · ExoQ", page_icon="👤", layout="wide")
+st.set_page_config(page_title="My Workspace · ExoQ", page_icon="👤", layout="wide", initial_sidebar_state="collapsed")
+
+# Hide sidebar completely for mobile-first design
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebar"] {
+            display: none !important;
+        }
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+        section[data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+        button[data-testid="stMainMenu"] {
+            display: none !important;
+        }
+        button[aria-label*="menu"],
+        button[aria-label*="Menu"] {
+            display: none !important;
+        }
+        header[data-testid="stHeader"] {
+            display: none !important;
+        }
+        span[data-testid="stIconMaterial"] {
+            display: none !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # --- Header + sign-in popover -----------------------------------------------
 st.markdown("# 👤 My Workspace")

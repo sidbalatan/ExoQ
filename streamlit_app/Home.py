@@ -31,6 +31,49 @@ st.set_page_config(
     page_title="ExoQ: Exoplanet Community Quest for Earth 2.0",
     page_icon="🌍",
     layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+# Hide sidebar completely for mobile-first design
+st.markdown(
+    """
+    <style>
+        /* Hide the entire sidebar */
+        [data-testid="stSidebar"] {
+            display: none !important;
+        }
+        /* Hide the collapsed sidebar toggle */
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+        /* Hide sidebar navigation */
+        section[data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+        /* Hide the main menu button (hamburger icon) */
+        button[data-testid="stMainMenu"] {
+            display: none !important;
+        }
+        /* Hide any button with aria-label containing "menu" */
+        button[aria-label*="menu"],
+        button[aria-label*="Menu"] {
+            display: none !important;
+        }
+        /* Hide the top-left header that contains the sidebar toggle */
+        .css-1d391kg {
+            display: none !important;
+        }
+        /* Hide the header block */
+        header[data-testid="stHeader"] {
+            display: none !important;
+        }
+        /* Hide the sidebar icon */
+        span[data-testid="stIconMaterial"] {
+            display: none !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.markdown(
@@ -107,11 +150,12 @@ st.markdown(
 )
 
 # --- Main Menu + inline Sign in / Sign up strip ------------------------------
-# Simple two-column layout: Main Menu on left, auth links on right.
+# Simple two-column layout: Main Menu flush left, auth links on right.
 menu_col, auth_col = st.columns([1, 4])
 with menu_col:
     with st.popover("☰ Main Menu", use_container_width=False):
         sign_in_widget()
+        st.page_link("pages/1_Authentication.py", label="Create an Account")
         st.markdown("---")
         st.markdown("#### 📚 Modules")
         st.markdown(
@@ -144,7 +188,7 @@ st.markdown(
     "Hand the pipeline a list of sky coordinates — upload a CSV or type "
     "RA/Dec pairs by hand."
 )
-with st.expander("Read more"):
+with st.expander("READ MORE: The Input Process"):
     st.markdown(
         "Module 1 accepts any CSV with `ra` and `dec` columns. Validated K Dwarf "
         "catalogs (those with `DR3Name`, `Teff`, `logg`, `RUWE`, etc.) are "
@@ -301,7 +345,7 @@ st.markdown(
     "Your coordinates are pushed against **ESA Gaia DR3** and forced through a gauntlet of "
     "quality filters. Only the fittest stars — the **🌱 Survivors** — move on to Modules 2–8."
 )
-with st.expander("Read more"):
+with st.expander("About the GAIA DR3 Filters in Isolating K Dwarfs . . ."):
     st.markdown(
         "ESA Gaia DR3 is the most precise stellar census ever made — *1.8 billion stars*. "
         "Just like life on Earth 1.0, only the fittest survive. The K Dwarfs that pass every "

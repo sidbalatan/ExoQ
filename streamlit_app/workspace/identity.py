@@ -136,7 +136,7 @@ def auth_strip() -> None:
             .st-key-exoq_auth div[data-testid="stHorizontalBlock"] {
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
-                justify-content: flex-end !important;
+                justify-content: flex-start !important;
                 align-items: center !important;
                 gap: 0.4rem !important;
             }
@@ -185,11 +185,11 @@ def auth_strip() -> None:
     with st.container(key="exoq_auth"):
         uid = current_user()
         if uid:
-            c_spacer, c_label, c_btn = st.columns([6, 3, 1])
-            with c_label:
-                display = current_display_name() or uid
+            display = current_display_name() or uid
+            c_text, c_btn = st.columns([10, 2])
+            with c_text:
                 st.markdown(
-                    f"<span class='exoq-auth-strip'>Signed in as <b>{display}</b></span>",
+                    f"<span style='font-size: 0.75rem; color: #6b7280;'>Signed in as <b style='color: #374151;'>{display}</b></span>",
                     unsafe_allow_html=True,
                 )
             with c_btn:
@@ -198,14 +198,8 @@ def auth_strip() -> None:
                     st.rerun()
             return
 
-        # Signed out: simple text links to the Authentication page.
-        c_in, c_pipe, c_up = st.columns([1, 1, 1])
-        with c_in:
-            st.page_link("pages/1_Authentication.py", label="Sign in")
-        with c_pipe:
-            st.markdown("<span class='exoq-auth-pipe'>|</span>", unsafe_allow_html=True)
-        with c_up:
-            st.page_link("pages/1_Authentication.py", label="Create an Account")
+        # Signed out: single compact link.
+        st.page_link("pages/1_Authentication.py", label="Sign in | Create an Account")
 
 
 def sign_in_widget(*, location_label: str = "👤 Sign in") -> None:

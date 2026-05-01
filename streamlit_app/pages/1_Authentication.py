@@ -14,6 +14,38 @@ st.set_page_config(
     page_title="ExoQ - Sign in or Create an Account",
     page_icon="🔑",
     layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
+# Hide sidebar completely for mobile-first design
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebar"] {
+            display: none !important;
+        }
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+        section[data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+        button[data-testid="stMainMenu"] {
+            display: none !important;
+        }
+        button[aria-label*="menu"],
+        button[aria-label*="Menu"] {
+            display: none !important;
+        }
+        header[data-testid="stHeader"] {
+            display: none !important;
+        }
+        span[data-testid="stIconMaterial"] {
+            display: none !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.markdown("# 🔑 Sign in to ExoQ")
