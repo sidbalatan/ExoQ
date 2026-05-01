@@ -124,64 +124,88 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
 # Public widgets
 # ---------------------------------------------------------------------------
 def auth_strip() -> None:
-    """Compact inline auth strip designed to sit just under the page title.
+    """Minimal inline auth strip: text links to the Authentication page.
 
-    * When signed out -> tiny grey line ``Not signed in`` plus two
-      popovers (**Sign in** / **Sign up**) at ~0.8rem.
-    * When signed in -> ``Signed in as <name>`` plus a compact **Sign out**.
+    * When signed out -> plain text links: "Sign in | Create an Account"
+    * When signed in -> "Signed in as <name>" + Sign out button
     """
-    # Scoped CSS so we don't bleed into other buttons.
+    # Keep the row horizontal and right-aligned.
     st.markdown(
         """
         <style>
-            .exoq-auth-strip {
-                font-size: 0.6rem;
+            .st-key-exoq_auth div[data-testid="stHorizontalBlock"] {
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: flex-end !important;
+                align-items: center !important;
+                gap: 0.4rem !important;
+            }
+            .st-key-exoq_auth div[data-testid="stHorizontalBlock"]
+                > div[data-testid="column"] {
+                width: auto !important;
+                flex: 0 0 auto !important;
+                min-width: 0 !important;
+                padding: 0 !important;
+            }
+            /* Make the page_link widgets look like plain text. */
+            .st-key-exoq_auth a[data-testid="stPageLink-NavLink"] {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #6b7280 !important;
+                font-weight: 500 !important;
+                font-size: 0.75rem !important;
+                text-decoration: none !important;
+                white-space: nowrap !important;
+            }
+            .st-key-exoq_auth a[data-testid="stPageLink-NavLink"]:hover {
+                color: #1b5e20 !important;
+                text-decoration: underline !important;
+            }
+            /* Pipe separator style. */
+            .st-key-exoq_auth .exoq-auth-pipe {
+                color: #d1d5db;
+                font-size: 0.75rem;
+                user-select: none;
+            }
+            /* Signed-in label. */
+            .st-key-exoq_auth .exoq-auth-strip {
+                font-size: 0.72rem;
                 color: #6b7280;
-                margin: -0.25rem 0 0.1rem 0;
+                white-space: nowrap;
             }
-            .exoq-auth-strip b { color: #374151; font-weight: 600; }
-            div[data-testid="stPopover"] button[aria-haspopup="true"] {
-                font-size: 0.6rem !important;
-                padding: 0.05rem 0.5rem !important;
-                min-height: 0 !important;
-                line-height: 1.1 !important;
-            }
-            /* Tighten the columns so the two popovers sit shoulder-to-shoulder */
-            .exoq-auth-row [data-testid="column"] { padding: 0 0.1rem !important; }
+            .st-key-exoq_auth .exoq-auth-strip b { color: #374151; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    uid = current_user()
-    if uid:
-        c1, c2 = st.columns([6, 1])
-        with c1:
-            display = current_display_name() or uid
-            st.markdown(
-                f"<div class='exoq-auth-strip' style='text-align:right;padding-top:0.4rem;'>"
-                f"Signed in as <b>{display}</b> &nbsp;·&nbsp;"
-                f"<code style='font-size:0.55rem'>{uid}</code></div>",
-                unsafe_allow_html=True,
-            )
-        with c2:
-            if st.button("Sign out", key="exoq_signout_btn"):
-                sign_out()
-                st.rerun()
-        return
+    with st.container(key="exoq_auth"):
+        uid = current_user()
+        if uid:
+            c_spacer, c_label, c_btn = st.columns([6, 3, 1])
+            with c_label:
+                display = current_display_name() or uid
+                st.markdown(
+                    f"<span class='exoq-auth-strip'>Signed in as <b>{display}</b></span>",
+                    unsafe_allow_html=True,
+                )
+            with c_btn:
+                if st.button("Sign out", key="exoq_signout_btn"):
+                    sign_out()
+                    st.rerun()
+            return
 
-    # Signed out: two compact popovers, side by side, centered.
-    st.markdown('<div class="exoq-auth-row">', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns([5, 1, 1, 5])
-    with c2:
-        with st.popover("Sign in", use_container_width=True):
-            st.markdown("**Sign in to ExoQ**")
-            _sign_in_form("exoq_signin_strip")
-    with c3:
-        with st.popover("Sign up", use_container_width=True):
-            st.markdown("**Create your ExoQ account**")
-            _sign_up_form("exoq_signup_strip")
-    st.markdown("</div>", unsafe_allow_html=True)
+        # Signed out: simple text links to the Authentication page.
+        c_in, c_pipe, c_up = st.columns([1, 1, 1])
+        with c_in:
+            st.page_link("pages/1_Authentication.py", label="Sign in")
+        with c_pipe:
+            st.markdown("<span class='exoq-auth-pipe'>|</span>", unsafe_allow_html=True)
+        with c_up:
+            st.page_link("pages/1_Authentication.py", label="Create an Account")
 
 
 def sign_in_widget(*, location_label: str = "👤 Sign in") -> None:

@@ -45,8 +45,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Compact Sign in / Sign up strip, sitting on the line just above the rule.
-auth_strip()
 st.markdown("---")
 
 # Style primary buttons (Run Module 1) in dark green.
@@ -108,31 +106,36 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- Main Menu (mobile-first dropdown navigation) ----------------------------
-with st.popover("☰ Main Menu", use_container_width=False):
-    sign_in_widget()
-    st.markdown("---")
-    st.markdown("#### 📚 Modules")
-    st.markdown(
-        "**▶ Module 1 of 8 - Data Input**  \n"
-        "🔒 Module 2 of 8 - Stellar Parameters  \n"
-        "🔒 Module 3 of 8 - Exoplanet Cross-Match  \n"
-        "🔒 Module 4 of 8 - TESS Light Curves  \n"
-        "🔒 Module 5 of 8 - Transit Detection  \n"
-        "🔒 Module 6 of 8 - Habitability Scoring  \n"
-        "🔒 Module 7 of 8 - Results Summary  \n"
-        "🔒 Module 8 of 8 - Data Export"
-    )
-    st.markdown("---")
-    run_pipeline = st.button(
-        "🚀 Run Full Pipeline",
-        disabled=True,
-        help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
-        use_container_width=True,
-    )
-    st.markdown("---")
-    st.markdown("#### 🔗 Links")
-    st.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
+# --- Main Menu + inline Sign in / Sign up strip ------------------------------
+# Simple two-column layout: Main Menu on left, auth links on right.
+menu_col, auth_col = st.columns([1, 4])
+with menu_col:
+    with st.popover("☰ Main Menu", use_container_width=False):
+        sign_in_widget()
+        st.markdown("---")
+        st.markdown("#### 📚 Modules")
+        st.markdown(
+            "**▶ Module 1 of 8 - Data Input**  \n"
+            "🔒 Module 2 of 8 - Stellar Parameters  \n"
+            "🔒 Module 3 of 8 - Exoplanet Cross-Match  \n"
+            "🔒 Module 4 of 8 - TESS Light Curves  \n"
+            "🔒 Module 5 of 8 - Transit Detection  \n"
+            "🔒 Module 6 of 8 - Habitability Scoring  \n"
+            "🔒 Module 7 of 8 - Results Summary  \n"
+            "🔒 Module 8 of 8 - Data Export"
+        )
+        st.markdown("---")
+        run_pipeline = st.button(
+            "🚀 Run Full Pipeline",
+            disabled=True,
+            help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+            use_container_width=True,
+        )
+        st.markdown("---")
+        st.markdown("#### 🔗 Links")
+        st.markdown("[💻 GitHub Repo](https://github.com/sidbalatan/ExoQ)")
+with auth_col:
+    auth_strip()
 
 # --- Main page: Module 1 input controls --------------------------------------
 st.markdown("##### 📥 Module 1 of 8 - Data Input")
