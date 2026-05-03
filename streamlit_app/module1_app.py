@@ -29,11 +29,15 @@ def local_css(file_name):
 
 local_css("streamlit_app/static/style.css")
 
+# Mobile-friendly navigation menu
+render_navigation()
+
 # Import module logic
 from modules.module1_data_input import DataInputModule
 from modules.integrity_tracker import IntegrityTracker
 
 from workspace import current_user, get_store
+from workspace.navigation import render_navigation
 from workspace.store import normalize_user_id, RunMeta, RunRecord, new_run_id
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
