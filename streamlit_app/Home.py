@@ -1357,6 +1357,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     # Display results tables
                     st.markdown("---")
                     st.markdown("### 🪐 Known Exoplanet Hosts")
+                    # Check if has_exoplanet column exists, if not add it based on exo_pl_name
+                    if 'has_exoplanet' not in crossmatched_data.columns:
+                        crossmatched_data['has_exoplanet'] = crossmatched_data['exo_pl_name'].notna()
                     exoplanet_hosts = crossmatched_data[crossmatched_data['has_exoplanet'] == True]
                     if len(exoplanet_hosts) > 0:
                         st.dataframe(
@@ -1396,7 +1399,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     
                     # Generate certificate
                     cert_png = render_module2_certificate(
-                        display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                        display_name=current_display_name() or current_user() or "ExoQ Pioneer",
                         total_stars=crossmatch_report['n_total'],
                         exoplanet_hosts=crossmatch_report['n_exoplanet_hosts'],
                         virgin_targets=crossmatch_report['n_virgin'],
@@ -1844,6 +1847,13 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 next_star_num = analyzed_count + 1
                                 
                                 if st.button(f"🔄 Analyze Next Star {next_star_num} of {total_available}", type="primary"):
+                                    # Get next unanalyzed star
+                                    tess_available = tess_data[tess_data['tess_available'] == True]
+                                    available_stars = tess_available[~tess_available['source_id'].isin(st.session_state.analyzed_stars)]
+                                    if len(available_stars) > 0:
+                                        next_star = available_stars.iloc[0]
+                                        st.session_state.selected_star = next_star
+                                        st.session_state.selected_source_id = next_star['source_id']
                                     st.rerun()
                         
                         # Display results tables
@@ -1891,7 +1901,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         
                         # Generate certificate
                         cert_png = render_module3_certificate(
-                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            display_name=current_display_name() or current_user() or "ExoQ Pioneer",
                             total_stars=tess_report['n_total'],
                             stars_with_data=tess_report['n_available'],
                             total_observation_days=tess_report['total_observation_days'],
@@ -2071,7 +2081,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         
                         # Generate certificate
                         cert_png = render_module4_certificate(
-                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            display_name=current_display_name() or current_user() or "ExoQ Pioneer",
                             total_stars=transit_report['n_total'],
                             transit_candidates=transit_report['n_candidates'],
                             passed_threshold=transit_report['n_passed'],
@@ -2242,7 +2252,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         
                         # Generate certificate
                         cert_png = render_module5_certificate(
-                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            display_name=current_display_name() or current_user() or "ExoQ Pioneer",
                             total_stars=scoring_report['n_total'],
                             highly_habitable=scoring_report['n_highly_habitable'],
                             habitable_exoplanets=scoring_report['n_habitable_exo'],
