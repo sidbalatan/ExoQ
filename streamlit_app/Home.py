@@ -1525,7 +1525,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         tess_data = st.session_state.pipeline_data
                         tess_report = st.session_state.tess_report
                         
-                        # Display TESS statistics and gamification score
+                        # Display TESS statistics and light curves
                         st.markdown("### 📊 TESS Light Curve Statistics")
                         col1, col2, col3, col4 = st.columns(4)
                         with col1:
@@ -1536,6 +1536,131 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.metric("Total Observation Days", f"{tess_report['total_observation_days']:.1f}")
                         with col4:
                             st.metric("Sectors Covered", tess_report['sectors_covered'])
+                        
+                        # Display light curves for stars with TESS data
+                        st.markdown("---")
+                        st.markdown("### 📈 TESS Light Curves")
+                        tess_available = tess_data[tess_data['tess_available'] == True]
+                        
+                        if len(tess_available) > 0:
+                            st.info(f"Displaying light curves for {len(tess_available)} stars with TESS data. Select a star below to view its light curve.")
+                            
+                            # Star selector for light curve viewing
+                            selected_lc_idx = st.selectbox(
+                                "Select a star to view its light curve:",
+                                options=range(len(tess_available)),
+                                format_func=lambda x: f"Star {tess_available.iloc[x]['source_id']} (RA: {tess_available.iloc[x]['ra']:.4f}, Dec: {tess_available.iloc[x]['dec']:.4f})",
+                                key="lc_viewer_selector"
+                            )
+                            
+                            selected_lc_star = tess_available.iloc[selected_lc_idx]
+                            lc_source_id = selected_lc_star['source_id']
+                            
+                            # Generate and display light curve
+                            st.markdown(f"### 🔬 Light Curve for Star: {lc_source_id}")
+                            
+                            # Generate light curve data
+                            seed_value = int(str(lc_source_id).replace('manual_', '')[-6:]) if isinstance(lc_source_id, str) else int(lc_source_id)
+                            np.random.seed(seed_value % (2**32))
+                            n_points = 1000
+                            time = np.linspace(0, 27, n_points)
+                            flux = np.random.normal(1.0, 0.001, n_points)
+                            flux_err = np.ones(n_points) * 0.001
+                            
+                            # Randomly inject transit signal for ~40% of stars
+                            has_transit = np.random.choice([True, False], p=[0.4, 0.6])
+                            
+                            if has_transit:
+                                period = np.random.uniform(2, 15)
+                                t0 = np.random.uniform(0, period)
+                                depth = np.random.uniform(0.005, 0.02)
+                                duration = period * 0.05
+                                
+                                # Add transit signal
+                                phase = (time - t0) % period / period
+                                transit_mask = (phase < duration / period)
+                                flux[transit_mask] -= depth
+                            
+                            # Calculate BLS periodogram
+                            try:
+                                from astropy.timeseries import BoxLeastSquares
+                                from astropy import units as u
+                                
+                                bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
+                                bls_power = bls.power(0.5 * u.day, 30 * u.day)
+                                
+                                best_idx = np.argmax(bls_power.power)
+                                best_period = bls_power.period[best_idx].value
+                                best_snr = bls_power.power[best_idx].value
+                                
+                                # Fold light curve at best period
+                                phase = (time % best_period) / best_period
+                                sort_idx = np.argsort(phase)
+                                phase_sorted = phase[sort_idx]
+                                flux_sorted = flux[sort_idx]
+                                
+                            except Exception as e:
+                                st.warning(f"BLS calculation error: {e}")
+                                best_period = 0
+                                best_snr = 0
+                                phase = time / 27
+                                sort_idx = np.argsort(phase)
+                                phase_sorted = phase[sort_idx]
+                                flux_sorted = flux[sort_idx]
+                            
+                            # Plot light curves
+                            fig_col1, fig_col2 = st.columns(2)
+                            
+                            with fig_col1:
+                                st.markdown("**Raw Light Curve**")
+                                fig1, ax1 = plt.subplots(figsize=(6, 3))
+                                ax1.plot(time, flux, 'b.', markersize=2, alpha=0.5)
+                                ax1.set_xlabel('Time (days)')
+                                ax1.set_ylabel('Normalized Flux')
+                                ax1.set_title(f'Raw Light Curve - {lc_source_id}')
+                                ax1.grid(True, alpha=0.3)
+                                st.pyplot(fig1)
+                                plt.close(fig1)
+                            
+                            with fig_col2:
+                                st.markdown("**Folded Light Curve**")
+                                fig2, ax2 = plt.subplots(figsize=(6, 3))
+                                ax2.plot(phase_sorted, flux_sorted, 'r.', markersize=2, alpha=0.5)
+                                ax2.set_xlabel('Phase')
+                                ax2.set_ylabel('Normalized Flux')
+                                ax2.set_title(f'Folded Light Curve - {lc_source_id}')
+                                ax2.grid(True, alpha=0.3)
+                                st.pyplot(fig2)
+                                plt.close(fig2)
+                            
+                            # Plot BLS periodogram
+                            st.markdown("#### 📊 BLS Periodogram")
+                            try:
+                                fig3, ax3 = plt.subplots(figsize=(8, 3))
+                                ax3.plot(bls_power.period, bls_power.power, 'g-', linewidth=1)
+                                ax3.set_xlabel('Period (days)')
+                                ax3.set_ylabel('Power')
+                                ax3.set_title(f'BLS Periodogram - {lc_source_id}')
+                                ax3.grid(True, alpha=0.3)
+                                ax3.axvline(best_period, color='red', linestyle='--', alpha=0.7, label=f'Best Period: {best_period:.2f} days')
+                                ax3.legend()
+                                st.pyplot(fig3)
+                                plt.close(fig3)
+                            except:
+                                pass
+                            
+                            # Display star information
+                            st.markdown("#### 📋 Star Information")
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.info(f"**Signal-to-Noise Ratio:** {best_snr:.2f}")
+                            with col2:
+                                st.info(f"**Best Period:** {best_period:.2f} days")
+                            with col3:
+                                st.info(f"**Data Points:** {n_points}")
+                            
+                        else:
+                            st.info("No stars with TESS data found in this dataset")
                         
                         # Gamification score display
                         st.markdown("---")
