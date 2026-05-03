@@ -2625,9 +2625,3 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-    <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
-        ExoQ: Community Quest for Earth 2.0 © 2026
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
