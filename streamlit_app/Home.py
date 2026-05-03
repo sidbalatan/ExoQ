@@ -1745,22 +1745,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         else:
                             st.info("No stars with TESS data found in this dataset")
                         
-                        # Gamification score display
-                        st.markdown("---")
-                        st.markdown("### 🎮 Gamification Score")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Your Score", st.session_state.score)
-                        with col2:
-                            st.metric("Current Streak", st.session_state.streak)
-                        with col3:
-                            st.metric("Stars Analyzed", f"{len(st.session_state.analyzed_stars)}/{tess_report['n_available']}")
-                        with col4:
-                            st.metric("Badges Earned", len(st.session_state.badges))
-                        
-                        if st.session_state.badges:
-                            st.markdown(f"**Badges:** {', '.join(st.session_state.badges)}")
-                        
                         # Gamification mode selection
                         st.markdown("---")
                         
@@ -1828,6 +1812,22 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                             st.session_state.selected_star = selected_star_data
                                             st.session_state.selected_source_id = source_id
                                             st.rerun()
+                                    
+                                    # Gamification score display (moved here after Analyze Curve button)
+                                    st.markdown("---")
+                                    st.markdown("### 🎮 Gamification Score")
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    with col1:
+                                        st.metric("Your Score", st.session_state.score)
+                                    with col2:
+                                        st.metric("Current Streak", st.session_state.streak)
+                                    with col3:
+                                        st.metric("Stars Analyzed", f"{len(st.session_state.analyzed_stars)}/{len(tess_available)}")
+                                    with col4:
+                                        st.metric("Badges Earned", len(st.session_state.badges))
+                                    
+                                    if st.session_state.badges:
+                                        st.markdown(f"**Badges:** {', '.join(st.session_state.badges)}")
                         
                         # Display light curve analysis if star selected
                         if st.session_state.get('selected_star') is not None:
@@ -2572,6 +2572,23 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.session_state.pipeline_data = None
                             st.session_state.scoring_report = None
                             st.rerun()
+
+    # Module 6: Results Summary (placeholder)
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
+        with st.expander("📊 Module 6 of 8 - Results Summary", expanded=True):
+            st.markdown("##### 📊 Module 6 of 8 - Results Summary")
+            st.markdown(
+                "**Review and export your final results.**  \n"
+                "This module provides a comprehensive summary of your analysis pipeline results, "
+                "including all stars analyzed, transit candidates detected, and habitability scores. "
+                "Export your findings for further study or publication."
+            )
+            st.info("🚧 Module 6 is under development. Coming soon!")
+            
+            # Return to previous module button
+            if st.button("⬅️ Return to Module 5", type="secondary"):
+                st.session_state.pipeline_step = 5
+                st.rerun()
 
 # Footer
 st.markdown("---")

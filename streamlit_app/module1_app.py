@@ -574,12 +574,5 @@ if run_module:
 st.markdown("---")
 st.markdown("### Next Steps")
 
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("🪐 Go to Module 2", key="go_to_module_2"):
-        st.info("Opening Module 2: Start Exoplanet Quest...")
-        # TODO: Link to module2_exoplanet_crossmatch.ipynb
-with col2:
-    if st.button("🏠 Return to Navigation Hub", key="return_to_hub"):
-        st.info("Returning to Navigation Hub...")
-        # TODO: Link to Home.ipynb
+if st.button("🏠 Return to Navigation Hub", key="return_to_hub"):
+    st.page_link("Home.py", label="Return to Home")
