@@ -1587,7 +1587,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(0.5 * u.day, 30 * u.day)
+                                bls_power = bls.power(2 * u.day, 30 * u.day)
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1790,7 +1790,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(0.5 * u.day, 30 * u.day)
+                                bls_power = bls.power(2 * u.day, 30 * u.day)
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1976,11 +1976,25 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 # Save user progress to persistent storage
                                 save_user_progress()
                                 
-                                # Display result
-                                st.markdown(f"### {result_text}")
-                                st.metric("Points Earned", points_earned)
-                                st.metric("Current Score", st.session_state.score)
-                                st.metric("Current Streak", st.session_state.streak)
+                                # Display result with clear feedback
+                                st.markdown("---")
+                                st.markdown("### 📊 Prediction Result")
+                                
+                                if user_pred == ground_truth:
+                                    st.success(f"✅ **CORRECT!** You correctly predicted this star {'HAS' if ground_truth else 'does NOT have'} a planet.")
+                                    st.success(f"🎯 **+{points_earned} points**")
+                                else:
+                                    st.error(f"❌ **INCORRECT!** This star {'HAS' if ground_truth else 'does NOT have'} a planet.")
+                                    st.error(f"📉 **{points_earned} points**")
+                                
+                                # Display metrics
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Points Earned", points_earned, delta=points_earned)
+                                with col2:
+                                    st.metric("Current Score", st.session_state.score)
+                                with col3:
+                                    st.metric("Current Streak", st.session_state.streak)
                                 
                                 # Check for other badges
                                 if len(st.session_state.analyzed_stars) >= 5 and "Novice Hunter" not in st.session_state.badges:
@@ -1991,30 +2005,47 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                     st.session_state.badges.append("Streak Master")
                                     st.success("🏆 Badge earned: Streak Master!")
                                 
-                                # Clear selection and prepare for next star
-                                st.session_state.selected_star = None
-                                st.session_state.selected_source_id = None
-                                st.session_state.user_prediction = None
+                                # Add Continue to Next Star button
+                                st.markdown("---")
+                                col_next, col_hab = st.columns(2)
+                                with col_next:
+                                    if st.button("🔄 Continue to Next Star", type="primary", key="continue_to_next"):
+                                        # Clear prediction for next star
+                                        st.session_state.user_prediction = None
+                                        
+                                        # Auto-advance to next unanalyzed star
+                                        tess_available = tess_data[tess_data['tess_available'] == True]
+                                        analyzed_set = set(st.session_state.analyzed_stars)
+                                        next_star = None
+                                        next_source_id = None
+                                        
+                                        for idx, row in tess_available.iterrows():
+                                            if row['source_id'] not in analyzed_set:
+                                                next_star = row
+                                                next_source_id = row['source_id']
+                                                break
+                                        
+                                        if next_star is not None:
+                                            st.session_state.selected_star = next_star
+                                            st.session_state.selected_source_id = next_source_id
+                                            st.info(f"✅ Next star {next_source_id} is now loaded and ready for analysis!")
+                                        else:
+                                            st.success("🎉 All stars analyzed! Great job!")
+                                            st.session_state.selected_star = None
+                                            st.session_state.selected_source_id = None
+                                        
+                                        st.rerun()
                                 
-                                # Calculate progress
-                                analyzed_count = len(st.session_state.analyzed_stars)
-                                total_available = tess_report['n_available']
-                                next_star_num = analyzed_count + 1
-                                
-                                # Find next unanalyzed star
-                                tess_available = tess_data[tess_data['tess_available'] == True]
-                                analyzed_set = set(st.session_state.analyzed_stars)
-                                next_star = None
-                                for idx, row in tess_available.iterrows():
-                                    if row['source_id'] not in analyzed_set:
-                                        next_star = row
-                                        break
-                                
-                                if st.button(f"🔄 Analyze Next Star {next_star_num} of {total_available}", type="secondary"):
-                                    if next_star is not None:
-                                        st.session_state.selected_star = next_star
-                                        st.session_state.selected_source_id = next_star['source_id']
-                                    st.rerun()
+                                with col_hab:
+                                    if st.button("🌍 Continue to Module 6: Habitability", type="secondary", key="continue_to_habitability"):
+                                        # Clear current star selection
+                                        st.session_state.selected_star = None
+                                        st.session_state.selected_source_id = None
+                                        st.session_state.user_prediction = None
+                                        # Set pipeline step to Module 6 (Habitability)
+                                        st.session_state.pipeline_step = 6
+                                        st.info("🌍 Continuing to Module 6: Habitability Analysis")
+                                        st.rerun()
                         
                         # Display results tables and continue button only when no star is selected
                         if st.session_state.get('selected_star') is None:
