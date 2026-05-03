@@ -1895,30 +1895,30 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         if st.session_state.get('selected_star') is None:
                             st.markdown("---")
                             st.markdown("### 📈 Stars with TESS Data")
-                        
-                        # Important notice about downloading TESS Results
-                        st.warning("⚠️ **Important:** Download TESS Results to be used in Module 4 later. The transit detection module requires the light curve data from this step.")
-                        tess_available = tess_data[tess_data['tess_available'] == True]
-                        if len(tess_available) > 0:
-                            st.dataframe(
-                                tess_available[['source_id', 'ra', 'dec', 'sectors', 'data_points', 'cadence_minutes', 'lc_quality']],
-                                use_container_width=True
-                            )
-                        else:
-                            st.info("No stars with TESS data found in this dataset")
-                        
-                        st.markdown("---")
-                        st.markdown("### ⚠️ Stars without TESS Data")
-                        tess_unavailable = tess_data[tess_data['tess_available'] == False]
-                        if len(tess_unavailable) > 0:
-                            st.dataframe(
-                                tess_unavailable[['source_id', 'ra', 'dec']].head(10),
-                                use_container_width=True
-                            )
-                            if len(tess_unavailable) > 10:
-                                st.info(f"Showing 10 of {len(tess_unavailable)} stars without TESS data")
-                        else:
-                            st.info("All stars have TESS data")
+                            
+                            # Important notice about downloading TESS Results
+                            st.warning("⚠️ **Important:** Download TESS Results to be used in Module 4 later. The transit detection module requires the light curve data from this step.")
+                            tess_available = tess_data[tess_data['tess_available'] == True]
+                            if len(tess_available) > 0:
+                                st.dataframe(
+                                    tess_available[['source_id', 'ra', 'dec', 'sectors', 'data_points', 'cadence_minutes', 'lc_quality']],
+                                    use_container_width=True
+                                )
+                            else:
+                                st.info("No stars with TESS data found in this dataset")
+                            
+                            st.markdown("---")
+                            st.markdown("### ⚠️ Stars without TESS Data")
+                            tess_unavailable = tess_data[tess_data['tess_available'] == False]
+                            if len(tess_unavailable) > 0:
+                                st.dataframe(
+                                    tess_unavailable[['source_id', 'ra', 'dec']].head(10),
+                                    use_container_width=True
+                                )
+                                if len(tess_unavailable) > 10:
+                                    st.info(f"Showing 10 of {len(tess_unavailable)} stars without TESS data")
+                            else:
+                                st.info("All stars have TESS data")
                         
                         # Display success summary, certificate, and download buttons only when no star is selected
                         if st.session_state.get('selected_star') is None:
