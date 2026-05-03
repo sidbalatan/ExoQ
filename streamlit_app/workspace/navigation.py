@@ -1,6 +1,6 @@
 """
 Navigation component for ExoQ
-Provides a permanent navigation menu accessible from any page.
+Provides a navigation menu accessible from any page.
 """
 
 import streamlit as st
@@ -9,18 +9,8 @@ import streamlit as st
 def render_navigation():
     """Render a navigation menu that can be added to any page."""
     
-    # Make the expander more prominent with CSS
-    st.markdown("""
-    <style>
-    div[data-testid="stExpander"] {
-        border: 2px solid #1b5e20 !important;
-        border-radius: 10px !important;
-        background-color: #f8f9fa !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    with st.expander("📱 ☰ MENU - Click to Open", expanded=False):
+    # Navigation button using popover (similar to Main Menu design)
+    with st.popover("🧭 Navigation Link", use_container_width=False):
         st.markdown("### 📚 Modules")
         if st.button("🏠 Home", key="nav_home", use_container_width=True):
             st.session_state.pipeline_step = 0
