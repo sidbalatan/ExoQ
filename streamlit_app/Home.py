@@ -34,6 +34,7 @@ from modules.module5_transit_detection import TransitDetectionModule
 from modules.module6_habitability_scoring import HabitabilityScoringModule
 from modules.module7_results_summary import ResultsSummaryModule
 from modules.module8_data_export import DataExportModule
+from modules.module4_5_exominer_vetting import ExoMinerVettingModule
 
 st.set_page_config(
     page_title="ExoQ: Exoplanet Community Quest for Earth 2.0",
@@ -304,17 +305,26 @@ with menu_col:
                 st.rerun()
         st.markdown("---")
         st.markdown("#### 📚 Modules")
-        st.markdown(
-            "**▶ Module 1 of 8 - Data Input and Gaia Survival Test**  \n"
-            "🔒 Module 2 of 8 - Start Exoplanet Quest  \n"
-            "🔒 Module 3 of 8 - TESS Light Curves  \n"
-            "🔒 Module 4 of 8 - Transit Detection  \n"
-            "🔒 Module 4.5 of 8 - ExoMiner++ Vetting  \n"
-            "🔒 Module 5 of 8 - Habitability Scoring  \n"
-            "🔒 Module 6 of 8 - Results Summary  \n"
-            "🔒 Module 7 of 8 - Discovery  \n"
-            "🔒 Module 8 of 8 - Data Export"
-        )
+        
+        # Dynamic navigation based on pipeline step
+        modules = []
+        for i, (name, step) in enumerate([
+            ("Data Input and Gaia Survival Test", 1),
+            ("Stellar Parameters", 2),
+            ("Exoplanet Crossmatch", 3),
+            ("TESS Light Curves", 4),
+            ("ExoMiner++ Vetting", 4.5),
+            ("Transit Detection", 5),
+            ("Habitability Scoring", 6),
+            ("Results Summary", 7),
+            ("Data Export", 8)
+        ]):
+            if st.session_state.get('pipeline_step', 0) >= step:
+                modules.append(f"**▶ Module {int(step) if step == int(step) else step} of 8 - {name}**")
+            else:
+                modules.append(f"🔒 Module {int(step) if step == int(step) else step} of 8 - {name}")
+        
+        st.markdown("  \n".join(modules))
         st.markdown("---")
         # Check if user can run full pipeline
         can_run_full_pipeline = False
@@ -1211,9 +1221,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 
     # Module 2: Start Exoplanet Quest
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
-        with st.expander("🪐 Module 2 of 8 - Start Exoplanet Quest", expanded=True):
+        with st.expander("🪐 Module 2 of 8 - Stellar Parameters", expanded=True):
             if st.session_state.pipeline_step == 2:
-                st.markdown("##### 📥 Module 2 of 8 - Start Exoplanet Quest")
+                st.markdown("##### 🪐 Module 2 of 8 - Stellar Parameters")
                 st.markdown(
                     "**Validate if K Dwarfs from Module 1 were already processed and catalogued.**  \n"
                     "Cross-match your K Dwarf survivors against the NASA Exoplanet Archive to identify "
@@ -1536,9 +1546,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 
     # Module 3: TESS Light Curves
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
-        with st.expander("📈 Module 3 of 8 - TESS Light Curves and Join Gamify LM", expanded=True):
+        with st.expander("📈 Module 3 of 8 - Exoplanet Crossmatch", expanded=True):
             if st.session_state.pipeline_step == 3:
-                st.markdown("##### 📥 Module 3 of 8 - TESS Light Curves and Join Gamify LM")
+                st.markdown("##### 📈 Module 3 of 8 - Exoplanet Crossmatch")
                 st.markdown(
                     "**Download TESS light curves for target stars from MAST API.**  \n"
                     "Retrieve photometric data from NASA's TESS mission to measure star brightness over time. "
@@ -2228,11 +2238,11 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 st.session_state.tess_report = None
                                 st.rerun()
 
-    # Module 4: Transit Detection
+    # Module 4: TESS Light Curves
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
-        with st.expander("🎯 Module 4 of 8 - Transit Detection", expanded=True):
+        with st.expander("📈 Module 4 of 8 - TESS Light Curves", expanded=True):
             if st.session_state.pipeline_step == 4:
-                st.markdown("##### 🎯 Module 4 of 8 - Transit Detection")
+                st.markdown("##### 📈 Module 4 of 8 - TESS Light Curves")
                 st.markdown(
                     "**Detect transit signals in TESS light curves using BLS periodogram.**  \n"
                     "Use the Box Least Squares (BLS) algorithm to search for periodic dips in star brightness - "
@@ -2397,8 +2407,8 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 mime="text/csv"
                             )
                         with col3:
-                            if st.button("🚀 Continue to Module 5", type="secondary"):
-                                st.session_state.pipeline_step = 5
+                            if st.button("🚀 Continue to Module 4.5: ExoMiner++ Vetting", type="secondary"):
+                                st.session_state.pipeline_step = 4.5
                                 st.rerun()
                         
                         # Reset button to start over
@@ -2409,11 +2419,226 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.session_state.transit_report = None
                             st.rerun()
 
-    # Module 5: Habitability Scoring
+    # Module 4.5: ExoMiner++ Vetting
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4.5:
+        with st.expander("🤖 Module 4.5 of 8 - ExoMiner++ Vetting", expanded=True):
+            if st.session_state.pipeline_step == 4.5:
+                st.markdown("##### 🤖 Module 4.5 of 8 - ExoMiner++ Vetting")
+                
+                # LIVE PROCESS badge
+                st.markdown(
+                    '<span style="background-color: #ef4444; color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">🔴 LIVE PROCESS</span>',
+                    unsafe_allow_html=True
+                )
+                
+                # NASA Attribution
+                st.markdown(
+                    """
+                    <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin: 16px 0; border-radius: 4px;">
+                        <strong>🔬 NASA Attribution:</strong> This module uses ExoMiner++ algorithms from NASA's GitHub repository 
+                        (<a href="https://github.com/nasa/ExoMiner" target="_blank">github.com/nasa/ExoMiner</a>). 
+                        ExoMiner++ is a deep learning-based system developed by NASA Ames Research Center for automated vetting of exoplanet candidates.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+                st.markdown(
+                    "**Vet transit candidates using NASA's ExoMiner++ deep learning models.**  \n"
+                    "ExoMiner++ applies state-of-the-art machine learning to distinguish real planets from false positives "
+                    "in TESS transit candidates. This module queries TESS SPOC TCEs for your detected candidates and applies "
+                    "NASA's vetting models to identify high-confidence planet candidates."
+                )
+                with st.expander("READ MORE: The ExoMiner++ Vetting Process . . ."):
+                    st.markdown(
+                        "Module 4.5 uses NASA's ExoMiner++ deep learning system for automated vetting of exoplanet candidates.\n\n"
+                        "- **ExoMiner++**: Deep learning model trained on thousands of confirmed planets and false positives\n"
+                        "- **TESS SPOC TCEs**: Queries the TESS Science Processing Operations Center for transit candidates\n"
+                        "- **MAST Data**: Downloads fresh light curve data from MAST archive for vetting\n"
+                        "- **Fallback**: Uses Module 3 TESS light curves if MAST download fails\n"
+                        "- **Vetting Threshold**: Configurable threshold to filter candidates by confidence score\n\n"
+                        "After vetting, only high-confidence candidates (above threshold) proceed to Module 5 for habitability scoring."
+                    )
+
+                st.caption(
+                    "Module 4.5 uses transit candidates from Module 4 and applies NASA's ExoMiner++ vetting to filter false positives."
+                )
+
+                # Podman status check
+                st.markdown("---")
+                st.markdown("### 🖥️ System Status")
+                module4_5 = ExoMinerVettingModule()
+                podman_installed, podman_msg = module4_5.check_podman_installed()
+                image_available, image_msg = module4_5.check_exominer_image()
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if podman_installed:
+                        st.success(f"✅ Podman: {podman_msg}")
+                    else:
+                        st.warning(f"⚠️ Podman: {podman_msg}")
+                with col2:
+                    if image_available:
+                        st.success(f"✅ ExoMiner++ Image: Available")
+                    else:
+                        st.warning(f"⚠️ ExoMiner++ Image: {image_msg}")
+
+                # Check if data is available from Module 4
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 4. Please complete Module 4 first.")
+                else:
+                    st.info(f"📊 Ready to vet {len(st.session_state.pipeline_data)} transit candidates")
+
+                    # Vetting configuration
+                    st.markdown("---")
+                    st.markdown("### ⚙️ Vetting Configuration")
+                    
+                    vetting_threshold = st.slider(
+                        "ExoMiner++ vetting threshold",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=0.5,
+                        step=0.1,
+                        help="Candidates with ExoMiner++ score above this threshold are considered vetted"
+                    )
+                    
+                    if not podman_installed or not image_available:
+                        st.error("❌ Podman or ExoMiner++ image not available. Live vetting requires Podman and ExoMiner++ image.")
+                        st.info("Please install Podman and run: `podman pull ghcr.io/nasa/exominer:latest`")
+
+                    # Run Module 4.5 button
+                    if not st.session_state.get('module4_5_complete', False):
+                        st.markdown("---")
+                        # Disable button if Podman not available
+                        button_disabled = not (podman_installed and image_available)
+                        if st.button("▶️ Run ExoMiner++ Vetting", type="primary", key="run_module4_5", disabled=button_disabled):
+                            with st.spinner("🤖 Running ExoMiner++ vetting... This may take several minutes."):
+                                try:
+                                    # Run vetting with live data (use_mock=False)
+                                    vetted_data, vetting_report = module4_5.vet_candidates(
+                                        st.session_state.pipeline_data,
+                                        threshold=vetting_threshold,
+                                        use_mock=False,  # Always use live data
+                                        filter_to_vetted=False  # Keep all candidates for now, filter later
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = vetted_data
+                                    st.session_state.vetting_report = vetting_report
+                                    st.session_state.module4_5_complete = True
+                                    
+                                    st.success(f"✅ Vetting complete: {vetting_report['n_vetted']} vetted, {vetting_report['n_rejected']} rejected")
+                                    st.info(f"Mean ExoMiner++ score: {vetting_report['mean_score']:.3f}")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error during vetting: {exc}")
+                                    st.info("Please try again or check the logs.")
+
+                    # Display Module 4.5 results if complete
+                    if st.session_state.get('module4_5_complete', False):
+                        vetting_data = st.session_state.pipeline_data
+                        vetting_report = st.session_state.vetting_report
+                        
+                        # Display vetting statistics
+                        st.markdown("### 📊 Vetting Statistics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Candidates", vetting_report['n_total'])
+                        with col2:
+                            st.metric("Vetted", vetting_report['n_vetted'])
+                        with col3:
+                            st.metric("Rejected", vetting_report['n_rejected'])
+                        with col4:
+                            st.metric("Mean Score", f"{vetting_report['mean_score']:.3f}")
+                        
+                        # Display score distribution
+                        st.markdown("---")
+                        st.markdown("### 📈 ExoMiner++ Score Distribution")
+                        if 'exominer_score' in vetting_data.columns:
+                            st.write(vetting_data['exominer_score'].describe())
+                        
+                        # Display vetted candidates
+                        st.markdown("---")
+                        st.markdown("### ✅ Vetted Candidates (Above Threshold)")
+                        vetted_df = vetting_data[vetting_data['exominer_vetted'] == True]
+                        if len(vetted_df) > 0:
+                            cols_to_show = ['source_id', 'ra', 'dec', 'exominer_score']
+                            if 'transit_period' in vetted_df.columns:
+                                cols_to_show.append('transit_period')
+                            if 'transit_depth' in vetted_df.columns:
+                                cols_to_show.append('transit_depth')
+                            st.dataframe(
+                                vetted_df[cols_to_show].head(10),
+                                use_container_width=True
+                            )
+                            if len(vetted_df) > 10:
+                                st.info(f"Showing 10 of {len(vetted_df)} vetted candidates")
+                        else:
+                            st.info("No vetted candidates found")
+                        
+                        # Display rejected candidates
+                        st.markdown("---")
+                        st.markdown("### ❌ Rejected Candidates (Below Threshold)")
+                        rejected_df = vetting_data[vetting_data['exominer_vetted'] == False]
+                        if len(rejected_df) > 0:
+                            cols_to_show = ['source_id', 'ra', 'dec', 'exominer_score']
+                            if 'transit_period' in rejected_df.columns:
+                                cols_to_show.append('transit_period')
+                            st.dataframe(
+                                rejected_df[cols_to_show].head(10),
+                                use_container_width=True
+                            )
+                            if len(rejected_df) > 10:
+                                st.info(f"Showing 10 of {len(rejected_df)} rejected candidates")
+                        else:
+                            st.info("No rejected candidates")
+                        
+                        # Filter option
+                        st.markdown("---")
+                        filter_to_vetted_only = st.checkbox(
+                            "Pass only vetted candidates to Module 5",
+                            value=True,
+                            help="If checked, only candidates above the threshold will proceed to habitability scoring"
+                        )
+                        
+                        if filter_to_vetted_only:
+                            st.session_state.pipeline_data = vetted_df.copy()
+                            st.info(f"Filtered to {len(vetted_df)} vetted candidates for Module 5")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Vetting Complete")
+                        st.markdown(module4_5.get_success_summary())
+                        
+                        # Download and continue buttons
+                        st.markdown("---")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            csv_data = vetting_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download Vetting Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module4_5_exominer_vetted_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col2:
+                            if st.button("🚀 Continue to Module 5", type="secondary"):
+                                st.session_state.pipeline_step = 5
+                                st.rerun()
+                        
+                        # Reset button
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 4.5", type="secondary"):
+                            st.session_state.module4_5_complete = False
+                            st.session_state.vetting_report = None
+                            st.rerun()
+
+    # Module 5: Transit Detection
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
-        with st.expander("🌍 Module 5 of 8 - Habitability Scoring", expanded=True):
+        with st.expander("🎯 Module 5 of 8 - Transit Detection", expanded=True):
             if st.session_state.pipeline_step == 5:
-                st.markdown("##### 🌍 Module 5 of 8 - Habitability Scoring")
+                st.markdown("##### 🎯 Module 5 of 8 - Transit Detection")
                 st.markdown(
                     "**Score habitability of stars and exoplanet candidates.**  \n"
                     "Calculate the Earth Similarity Index (ESI) for exoplanets and evaluate stellar habitability "
@@ -2599,22 +2824,404 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.session_state.scoring_report = None
                             st.rerun()
 
-    # Module 6: Results Summary (placeholder)
+    # Module 6: Habitability Scoring
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
-        with st.expander("📊 Module 6 of 8 - Results Summary", expanded=True):
-            st.markdown("##### 📊 Module 6 of 8 - Results Summary")
-            st.markdown(
-                "**Review and export your final results.**  \n"
-                "This module provides a comprehensive summary of your analysis pipeline results, "
-                "including all stars analyzed, transit candidates detected, and habitability scores. "
-                "Export your findings for further study or publication."
-            )
-            st.info("🚧 Module 6 is under development. Coming soon!")
-            
-            # Return to previous module button
-            if st.button("⬅️ Return to Module 5", type="secondary"):
-                st.session_state.pipeline_step = 5
-                st.rerun()
+        with st.expander("🌍 Module 6 of 8 - Habitability Scoring", expanded=True):
+            if st.session_state.pipeline_step == 6:
+                st.markdown("##### 🌍 Module 6 of 8 - Habitability Scoring")
+                st.markdown(
+                    "**Score habitability of stars and exoplanet candidates.**  \n"
+                    "Calculate the Earth Similarity Index (ESI) for exoplanets and evaluate stellar habitability "
+                    "based on temperature, surface gravity, metallicity, and activity. Identify the most promising "
+                    "Earth 2.0 candidates for further study."
+                )
+                with st.expander("READ MORE: The Habitability Scoring Process . . ."):
+                    st.markdown(
+                        "Module 6 evaluates the habitability potential of stars and exoplanet candidates using multiple criteria.\n\n"
+                        "- **Stellar Habitability**: Scores stars based on temperature (3900-4800K optimal), surface gravity (>4.5 dex for main sequence), and RUWE (<1.2 for low variability)\n"
+                        "- **Exoplanet Habitability**: Scores planets based on radius (0.8-1.5 Earth radii), orbital period (habitable zone), and signal-to-noise ratio\n"
+                        "- **Earth Similarity Index (ESI)**: A metric comparing exoplanets to Earth based on radius, temperature, and other properties (1.0 = Earth-like)\n"
+                        "- **Habitable Zone**: The region around a star where liquid water could exist on a planet's surface\n\n"
+                        "After scoring, Module 6 identifies the most habitable stars and exoplanets. Only high-scoring candidates "
+                        "move to Module 7 for the final results summary."
+                    )
+
+                st.caption(
+                    "Module 6 uses transit detection data from Module 5 and stellar parameters from Module 2. "
+                    "Candidates are scored for habitability potential using the Earth Similarity Index."
+                )
+
+                # Check if data is available from Module 5
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 5. Please complete Module 5 first.")
+                else:
+                    st.info(f"📊 Ready to score {len(st.session_state.pipeline_data)} stars for habitability")
+
+                    # Run Module 6 button
+                    if not st.session_state.get('module6_complete', False):
+                        st.markdown("---")
+                        if st.button("🌍 Run Module 6 — Habitability Scoring", type="primary", key="run_module6"):
+                            with st.spinner("🌍 Scoring habitability and calculating Earth Similarity Index..."):
+                                # Initialize Module 6 (Habitability Scoring)
+                                module6 = HabitabilityScoringModule()
+                                
+                                # Run habitability scoring
+                                try:
+                                    habitability_data, scoring_report = module6.score_habitability(
+                                        st.session_state.pipeline_data
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = habitability_data
+                                    st.session_state.scoring_report = scoring_report
+                                    st.session_state.module6_complete = True
+                                    
+                                    st.success(f"✅ Scored {len(habitability_data)} stars for habitability")
+                                    st.info(f"Highly habitable stars: {scoring_report['n_highly_habitable']}")
+                                    st.info(f"Habitable exoplanets: {scoring_report['n_habitable_exo']}")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error during habitability scoring: {exc}")
+                                    st.info("Using mock data for demonstration")
+
+                    # Display Module 6 results if complete
+                    if st.session_state.get('module6_complete', False):
+                        habitability_data = st.session_state.pipeline_data
+                        scoring_report = st.session_state.scoring_report
+                        
+                        # Display habitability statistics
+                        st.markdown("### 📊 Habitability Statistics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Stars", scoring_report['n_total'])
+                        with col2:
+                            st.metric("Highly Habitable", scoring_report['n_highly_habitable'])
+                        with col3:
+                            st.metric("Habitable Exoplanets", scoring_report['n_habitable_exo'])
+                        with col4:
+                            st.metric("Max ESI", f"{scoring_report['max_esi']:.2f}")
+                        
+                        # Display results tables
+                        st.markdown("---")
+                        st.markdown("### 🌟 Highly Habitable Stars")
+                        highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
+                        if len(highly_habitable) > 0:
+                            cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
+                            if 'exo_hab_score' in highly_habitable.columns:
+                                cols_to_show.append('exo_hab_score')
+                            if 'esi' in highly_habitable.columns:
+                                cols_to_show.append('esi')
+                            st.dataframe(
+                                highly_habitable[cols_to_show].head(10),
+                                use_container_width=True
+                            )
+                            if len(highly_habitable) > 10:
+                                st.info(f"Showing 10 of {len(highly_habitable)} highly habitable stars")
+                        else:
+                            st.info("No highly habitable stars found")
+                        
+                        st.markdown("---")
+                        st.markdown("### 🪐 Habitable Exoplanet Candidates")
+                        if 'transit_passed_threshold' in habitability_data.columns:
+                            if 'exo_hab_score' in habitability_data.columns:
+                                habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
+                            else:
+                                habitable_exo = habitability_data[habitability_data['transit_passed_threshold'] == True]
+                            
+                            if len(habitable_exo) > 0:
+                                cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
+                                if 'exo_hab_score' in habitable_exo.columns:
+                                    cols_to_show.append('exo_hab_score')
+                                if 'esi' in habitable_exo.columns:
+                                    cols_to_show.append('esi')
+                                if 'transit_period' in habitable_exo.columns:
+                                    cols_to_show.append('transit_period')
+                                st.dataframe(
+                                    habitable_exo[cols_to_show].head(10),
+                                    use_container_width=True
+                                )
+                                if len(habitable_exo) > 10:
+                                    st.info(f"Showing 10 of {len(habitable_exo)} habitable exoplanets")
+                            else:
+                                st.info("No habitable exoplanets found")
+                        else:
+                            st.info("No transit data available for exoplanet scoring")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Habitability Scoring Complete")
+                        module6 = HabitabilityScoringModule()
+                        module6.data = habitability_data
+                        module6.scoring_report = scoring_report
+                        st.markdown(module6.get_success_summary())
+                        
+                        # Download and continue buttons
+                        st.markdown("---")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            csv_data = habitability_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download Habitability Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module6_habitability_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col2:
+                            if st.button("🚀 Continue to Module 7", type="secondary"):
+                                st.session_state.pipeline_step = 7
+                                st.rerun()
+                        
+                        # Reset button
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 6", type="secondary"):
+                            st.session_state.module6_complete = False
+                            st.session_state.pipeline_data = None
+                            st.session_state.scoring_report = None
+                            st.rerun()
+
+    # Module 7: Results Summary
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 7:
+        with st.expander("📊 Module 7 of 8 - Results Summary", expanded=True):
+            if st.session_state.pipeline_step == 7:
+                st.markdown("##### 📊 Module 7 of 8 - Results Summary")
+                st.markdown(
+                    "**Review and export your final results.**  \n"
+                    "This module provides a comprehensive summary of your analysis pipeline results, "
+                    "including all stars analyzed, transit candidates detected, and habitability scores. "
+                    "Export your findings for further study or publication."
+                )
+                with st.expander("READ MORE: Results Summary Process . . ."):
+                    st.markdown(
+                        "Module 7 compiles all results from the previous modules into a comprehensive summary.\n\n"
+                        "- **Statistical Overview**: Aggregated statistics for all stars analyzed through the pipeline\n"
+                        "- **Top Discoveries**: Ranked list of the most promising Earth 2.0 candidates based on multiple criteria\n"
+                        "- **Quality Metrics**: Success rates, confidence levels, and validation scores for each stage\n"
+                        "- **Data Integration**: Combines data from all modules into a single export-ready dataset\n\n"
+                        "After reviewing the summary, you can export your complete dataset in multiple formats "
+                        "for further analysis or sharing with the scientific community."
+                    )
+
+                st.caption(
+                    "Module 7 uses results from all previous modules to generate a comprehensive summary "
+                    "of your exoplanet search campaign."
+                )
+
+                # Check if data is available from Module 6
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 6. Please complete Module 6 first.")
+                else:
+                    st.info(f"📊 Ready to generate summary for {len(st.session_state.pipeline_data)} stars")
+
+                    # Run Module 7 button
+                    if not st.session_state.get('module7_complete', False):
+                        st.markdown("---")
+                        if st.button("📊 Generate Results Summary", type="primary", key="run_module7"):
+                            with st.spinner("📊 Generating comprehensive results summary..."):
+                                # Initialize Module 7 (Results Summary)
+                                module7 = ResultsSummaryModule()
+                                
+                                # Generate summary
+                                try:
+                                    summary_data, summary_report = module7.generate_summary(
+                                        st.session_state.pipeline_data
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = summary_data
+                                    st.session_state.summary_report = summary_report
+                                    st.session_state.module7_complete = True
+                                    
+                                    st.success(f"✅ Generated summary for {len(summary_data)} stars")
+                                    st.info(f"Top discoveries: {len(summary_report.get('top_discoveries', []))}")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error during summary generation: {exc}")
+                                    st.info("Using basic summary for demonstration")
+
+                    # Display Module 7 results if complete
+                    if st.session_state.get('module7_complete', False):
+                        summary_data = st.session_state.pipeline_data
+                        summary_report = st.session_state.summary_report
+                        
+                        # Display summary statistics
+                        st.markdown("### 📊 Pipeline Statistics")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total Stars", summary_report['n_total_stars'])
+                        with col2:
+                            st.metric("Highly Habitable", summary_report.get('n_highly_habitable', 0))
+                        with col3:
+                            st.metric("Transit Candidates", summary_report.get('n_transit_candidates', 0))
+                        
+                        # Display top discoveries
+                        st.markdown("---")
+                        st.markdown("### 🌟 Top Discoveries")
+                        if 'top_discoveries' in summary_report and len(summary_report['top_discoveries']) > 0:
+                            for i, discovery in enumerate(summary_report['top_discoveries'][:5], 1):
+                                st.info(f"{i}. TIC {discovery['source_id']} - {discovery['description']}")
+                        else:
+                            st.info("No top discoveries identified")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Results Summary Complete")
+                        module7 = ResultsSummaryModule()
+                        module7.data = summary_data
+                        module7.summary_report = summary_report
+                        st.markdown(module7.get_success_summary())
+                        
+                        # Download and continue buttons
+                        st.markdown("---")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            csv_data = summary_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download Complete Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module7_complete_results_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col2:
+                            if st.button("🚀 Continue to Module 8", type="secondary"):
+                                st.session_state.pipeline_step = 8
+                                st.rerun()
+                        
+                        # Reset button
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 7", type="secondary"):
+                            st.session_state.module7_complete = False
+                            st.session_state.summary_report = None
+                            st.rerun()
+
+    # Module 8: Data Export
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 8:
+        with st.expander("📤 Module 8 of 8 - Data Export", expanded=True):
+            if st.session_state.pipeline_step == 8:
+                st.markdown("##### 📤 Module 8 of 8 - Data Export")
+                st.markdown(
+                    "**Export your results in multiple formats.**  \n"
+                    "Download your complete dataset in CSV, JSON, or other formats for sharing "
+                    "with collaborators or for further analysis in your preferred software."
+                )
+                with st.expander("READ MORE: Data Export Process . . ."):
+                    st.markdown(
+                        "Module 8 exports your complete pipeline results in multiple formats.\n\n"
+                        "- **CSV Format**: Comma-separated values, ideal for spreadsheet applications like Excel, Google Sheets, or statistical software\n"
+                        "- **JSON Format**: JavaScript Object Notation, perfect for web applications, APIs, or programmatic access\n"
+                        "- **Metadata**: Export report includes file sizes, record counts, and timestamps for documentation\n"
+                        "- **Version Control**: Each export includes a timestamp to track different versions of your analysis\n\n"
+                        "After exporting, you can share your discoveries with the scientific community, "
+                        "use them for follow-up observations, or prepare them for publication."
+                    )
+
+                st.caption(
+                    "Module 8 uses the final dataset from Module 7 to generate export files "
+                    "in your preferred formats."
+                )
+
+                # Check if data is available from Module 7
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 7. Please complete Module 7 first.")
+                else:
+                    st.info(f"📊 Ready to export {len(st.session_state.pipeline_data)} stars")
+
+                    # Export options
+                    st.markdown("---")
+                    st.markdown("### 📋 Export Options")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        export_csv = st.checkbox("CSV Format", value=True)
+                    with col2:
+                        export_json = st.checkbox("JSON Format", value=False)
+                    
+                    # Run Module 8 button
+                    if not st.session_state.get('module8_complete', False):
+                        st.markdown("---")
+                        if st.button("📤 Export Data", type="primary", key="run_module8"):
+                            with st.spinner("📤 Exporting data..."):
+                                # Initialize Module 8 (Data Export)
+                                module8 = DataExportModule()
+                                
+                                # Determine export formats
+                                formats = []
+                                if export_csv:
+                                    formats.append('csv')
+                                if export_json:
+                                    formats.append('json')
+                                
+                                if not formats:
+                                    st.warning("⚠️ Please select at least one export format.")
+                                else:
+                                    try:
+                                        export_report, summary = module8.export_data(
+                                            st.session_state.pipeline_data,
+                                            formats=formats,
+                                            output_dir='data/exports',
+                                            filename_prefix='exoq_results'
+                                        )
+                                        
+                                        # Store results in session state
+                                        st.session_state.export_report = export_report
+                                        st.session_state.module8_complete = True
+                                        
+                                        st.success(f"✅ Exported data in {len(formats)} format(s)")
+                                        st.info(f"Total size: {export_report['total_size_kb']:.2f} KB")
+                                        st.rerun()
+                                        
+                                    except Exception as exc:
+                                        st.error(f"❌ Error during export: {exc}")
+                                        st.info("Export failed. Please try again.")
+
+                    # Display Module 8 results if complete
+                    if st.session_state.get('module8_complete', False):
+                        export_report = st.session_state.export_report
+                        
+                        # Display export statistics
+                        st.markdown("### 📊 Export Statistics")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Formats", export_report['n_formats'])
+                        with col2:
+                            st.metric("Rows Exported", export_report['n_rows_exported'])
+                        with col3:
+                            st.metric("File Size", f"{export_report['total_size_kb']:.2f} KB")
+                        
+                        # Display export files
+                        st.markdown("---")
+                        st.markdown("### 📁 Exported Files")
+                        if 'files' in export_report and len(export_report['files']) > 0:
+                            for format, file_info in export_report['files'].items():
+                                st.info(f"**{format.upper()}**: {file_info['path']} ({file_info['size_kb']:.2f} KB)")
+                        else:
+                            st.info("No files exported")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Pipeline Complete!")
+                        module8 = DataExportModule()
+                        module8.export_report = export_report
+                        st.markdown(module8.get_success_summary())
+                        
+                        # Reset button to start new pipeline
+                        st.markdown("---")
+                        st.markdown("### 🔄 Start New Pipeline")
+                        if st.button("🚀 Start New Analysis", type="primary"):
+                            # Reset all session state
+                            for key in list(st.session_state.keys()):
+                                if key.startswith('module') or key in ['pipeline_step', 'pipeline_started', 'pipeline_data', 
+                                                                     'validation_report', 'gaia_data', 'transit_report', 
+                                                                     'scoring_report', 'summary_report', 'export_report']:
+                                    del st.session_state[key]
+                            st.rerun()
+                        
+                        # Reset Module 8 only
+                        if st.button("🔄 Reset Module 8", type="secondary"):
+                            st.session_state.module8_complete = False
+                            st.session_state.export_report = None
+                            st.rerun()
 
 # Footer
 st.markdown("---")
