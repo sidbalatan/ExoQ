@@ -22,7 +22,7 @@ APP_ROOT = HERE.parents[1]  # streamlit_app/
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from workspace import current_user, sign_in_widget, get_store, current_email  # noqa: E402
+from workspace import current_user, sign_in_widget, get_store, current_email, current_display_name  # noqa: E402
 
 st.set_page_config(page_title="My Workspace · ExoQ", page_icon="👤", layout="wide", initial_sidebar_state="collapsed")
 
@@ -81,6 +81,71 @@ st.caption(
     f"Signed in as **{current_email() or uid}** "
     f"(`{uid}`). Runs below are private to your workspace folder."
 )
+
+# --- Profile Section --------------------------------------------------------
+with st.expander("👤 Edit Profile", expanded=False):
+    store = get_store()
+    current_name = current_display_name() or ""
+    current_age = None
+    current_gender = "Prefer not to say"
+    current_country = ""
+    
+    # Load current profile data if available
+    try:
+        prof_path = store._profile_path(uid)
+        if prof_path.exists():
+            import json
+            profile_data = json.loads(prof_path.read_text(encoding="utf-8"))
+            current_age = profile_data.get("age")
+            current_gender = profile_data.get("gender", "Prefer not to say") or "Prefer not to say"
+            current_country = profile_data.get("country", "") or ""
+    except Exception:
+        pass
+    
+    new_display_name = st.text_input(
+        "Display Name",
+        value=current_name,
+        help="This appears on your certificates.",
+    )
+    new_age = st.number_input(
+        "Age",
+        min_value=13,
+        max_value=120,
+        value=current_age if current_age else None,
+        help="Optional demographic information.",
+    )
+    gender_options = ["Prefer not to say", "Male", "Female", "Non-binary", "Other"]
+    gender_index = gender_options.index(current_gender) if current_gender in gender_options else 0
+    new_gender = st.selectbox(
+        "Gender",
+        options=gender_options,
+        index=gender_index,
+        help="Optional demographic information.",
+    )
+    new_country = st.text_input(
+        "Country",
+        value=current_country,
+        placeholder="e.g., Philippines",
+        help="Optional demographic information.",
+    )
+    
+    if st.button("💾 Save Profile", type="primary"):
+        if not new_display_name or not new_display_name.strip():
+            st.error("Display Name is required.")
+        else:
+            # Update profile in store
+            from workspace.identity import SESSION_DISPLAY_NAME_KEY
+            store.update_profile(
+                uid,
+                display_name=new_display_name.strip(),
+                age=new_age if new_age else None,
+                gender=new_gender if new_gender != "Prefer not to say" else None,
+                country=new_country.strip() if new_country else None,
+            )
+            # Update session state
+            st.session_state[SESSION_DISPLAY_NAME_KEY] = new_display_name.strip()
+            st.success("Profile updated successfully!")
+            st.rerun()
 
 store = get_store()
 runs = store.list_runs(uid)

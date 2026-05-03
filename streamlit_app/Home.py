@@ -19,7 +19,7 @@ load_dotenv()
 
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
-from workspace import auth_strip, current_user, sign_in_widget, get_store
+from workspace import auth_strip, current_user, sign_in_widget, get_store, save_user_progress
 from workspace.store import RunMeta, RunRecord, new_run_id, normalize_user_id
 from certificate import render_certificate, render_module2_certificate, render_module3_certificate, render_module4_certificate, render_module5_certificate
 
@@ -1570,29 +1570,56 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             if len(tess_available) == 0:
                                 st.info("No stars with TESS data available for gamification.")
                             else:
-                                # Filter out already analyzed stars
-                                available_stars = tess_available[~tess_available['source_id'].isin(st.session_state.analyzed_stars)]
+                                # Show all stars, but mark which ones are analyzed
+                                analyzed_set = set(st.session_state.analyzed_stars)
                                 
-                                if len(available_stars) == 0:
+                                # Create a list of star indices with their status
+                                star_options = []
+                                for idx, row in tess_available.iterrows():
+                                    is_analyzed = row['source_id'] in analyzed_set
+                                    star_options.append({
+                                        'index': idx,
+                                        'data': row,
+                                        'analyzed': is_analyzed
+                                    })
+                                
+                                # Find next unanalyzed star index
+                                next_unanalyzed_idx = None
+                                for i, star_opt in enumerate(star_options):
+                                    if not star_opt['analyzed']:
+                                        next_unanalyzed_idx = i
+                                        break
+                                
+                                if next_unanalyzed_idx is None:
                                     st.success("🎉 You've analyzed all available stars! Great job!")
                                 else:
                                     # Star selection UI
                                     st.markdown("#### Select a Star to Analyze")
+                                    
+                                    # Format function to show star info with grey out for analyzed stars
+                                    def format_star_option(idx):
+                                        star = star_options[idx]
+                                        status = "✓ " if star['analyzed'] else ""
+                                        return f"{status}Star {star['data']['source_id']} | RA: {star['data']['ra']:.4f} | Dec: {star['data']['dec']:.4f}"
+                                    
                                     selected_star_idx = st.selectbox(
                                         "Choose a star from the list:",
-                                        options=range(len(available_stars)),
-                                        format_func=lambda x: f"Star {available_stars.iloc[x]['source_id']} (RA: {available_stars.iloc[x]['ra']:.2f}, Dec: {available_stars.iloc[x]['dec']:.2f})",
-                                        key="star_selector"
+                                        options=range(len(star_options)),
+                                        format_func=format_star_option,
+                                        key="star_selector",
+                                        index=next_unanalyzed_idx if next_unanalyzed_idx is not None else 0
                                     )
                                     
-                                    selected_star = available_stars.iloc[selected_star_idx]
-                                    source_id = selected_star['source_id']
+                                    selected_star_data = star_options[selected_star_idx]['data']
+                                    source_id = selected_star_data['source_id']
                                     
-                                    # Analyze button
-                                    if st.button("🔍 Analyze Light Curve", type="primary", key="analyze_star"):
-                                        st.session_state.selected_star = selected_star
-                                        st.session_state.selected_source_id = source_id
-                                        st.rerun()
+                                    # Analyze button - disable if already analyzed
+                                    is_analyzed = star_options[selected_star_idx]['analyzed']
+                                    if st.button("🔍 Analyze Light Curve", type="primary", key="analyze_star", disabled=is_analyzed):
+                                        if not is_analyzed:
+                                            st.session_state.selected_star = selected_star_data
+                                            st.session_state.selected_source_id = source_id
+                                            st.rerun()
                         
                         # Display light curve analysis if star selected
                         if st.session_state.get('selected_star') is not None:
@@ -1821,6 +1848,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 # Mark star as analyzed
                                 st.session_state.analyzed_stars.append(source_id)
                                 
+                                # Save user progress to persistent storage
+                                save_user_progress()
+                                
                                 # Display result
                                 st.markdown(f"### {result_text}")
                                 st.metric("Points Earned", points_earned)
@@ -1836,7 +1866,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                     st.session_state.badges.append("Streak Master")
                                     st.success("🏆 Badge earned: Streak Master!")
                                 
-                                # Clear selection
+                                # Clear selection and prepare for next star
                                 st.session_state.selected_star = None
                                 st.session_state.selected_source_id = None
                                 st.session_state.user_prediction = None
@@ -1846,19 +1876,25 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 total_available = tess_report['n_available']
                                 next_star_num = analyzed_count + 1
                                 
-                                if st.button(f"🔄 Analyze Next Star {next_star_num} of {total_available}", type="primary"):
-                                    # Get next unanalyzed star
-                                    tess_available = tess_data[tess_data['tess_available'] == True]
-                                    available_stars = tess_available[~tess_available['source_id'].isin(st.session_state.analyzed_stars)]
-                                    if len(available_stars) > 0:
-                                        next_star = available_stars.iloc[0]
+                                # Find next unanalyzed star
+                                tess_available = tess_data[tess_data['tess_available'] == True]
+                                analyzed_set = set(st.session_state.analyzed_stars)
+                                next_star = None
+                                for idx, row in tess_available.iterrows():
+                                    if row['source_id'] not in analyzed_set:
+                                        next_star = row
+                                        break
+                                
+                                if st.button(f"🔄 Analyze Next Star {next_star_num} of {total_available}", type="secondary"):
+                                    if next_star is not None:
                                         st.session_state.selected_star = next_star
                                         st.session_state.selected_source_id = next_star['source_id']
                                     st.rerun()
                         
-                        # Display results tables
-                        st.markdown("---")
-                        st.markdown("### 📈 Stars with TESS Data")
+                        # Display results tables and continue button only when no star is selected
+                        if st.session_state.get('selected_star') is None:
+                            st.markdown("---")
+                            st.markdown("### 📈 Stars with TESS Data")
                         
                         # Important notice about downloading TESS Results
                         st.warning("⚠️ **Important:** Download TESS Results to be used in Module 4 later. The transit detection module requires the light curve data from this step.")
@@ -1884,65 +1920,67 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         else:
                             st.info("All stars have TESS data")
                         
-                        # Display success summary
-                        st.markdown("---")
-                        st.markdown("### 🎉 TESS Light Curve Download Complete")
-                        module3 = TESSLightCurveModule()
-                        module3.data = tess_data
-                        module3.download_report = tess_report
-                        st.markdown(module3.get_success_summary())
-                        
-                        # Generate and display Module 3 certificate
-                        st.markdown("---")
-                        st.markdown("### 🏆 Module 3 Certificate")
-                        
-                        # Get sample source IDs for certificate
-                        sample_ids = tess_data['source_id'].head(5).tolist()
-                        
-                        # Generate certificate
-                        cert_png = render_module3_certificate(
-                            display_name=current_display_name() or current_user() or "ExoQ Pioneer",
-                            total_stars=tess_report['n_total'],
-                            stars_with_data=tess_report['n_available'],
-                            total_observation_days=tess_report['total_observation_days'],
-                            sectors_covered=tess_report['sectors_covered'],
-                            sample_source_ids=sample_ids,
-                            run_id=new_run_id(),
-                        )
-                        
-                        # Display certificate
-                        st.image(cert_png, use_container_width=True)
-                        
-                        # Download buttons for certificate and data
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.download_button(
-                                label="📥 Download Certificate",
-                                data=cert_png,
-                                file_name=f"exomodule3_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
-                                mime="image/png",
-                                type="primary"
+                        # Display success summary, certificate, and download buttons only when no star is selected
+                        if st.session_state.get('selected_star') is None:
+                            # Display success summary
+                            st.markdown("---")
+                            st.markdown("### 🎉 TESS Light Curve Download Complete")
+                            module3 = TESSLightCurveModule()
+                            module3.data = tess_data
+                            module3.download_report = tess_report
+                            st.markdown(module3.get_success_summary())
+                            
+                            # Generate and display Module 3 certificate
+                            st.markdown("---")
+                            st.markdown("### 🏆 Module 3 Certificate")
+                            
+                            # Get sample source IDs for certificate
+                            sample_ids = tess_data['source_id'].head(5).tolist()
+                            
+                            # Generate certificate
+                            cert_png = render_module3_certificate(
+                                display_name=current_display_name() or current_user() or "ExoQ Pioneer",
+                                total_stars=tess_report['n_total'],
+                                stars_with_data=tess_report['n_available'],
+                                total_observation_days=tess_report['total_observation_days'],
+                                sectors_covered=tess_report['sectors_covered'],
+                                sample_source_ids=sample_ids,
+                                run_id=new_run_id(),
                             )
-                        with col2:
-                            csv_data = tess_data.to_csv(index=False)
-                            st.download_button(
-                                label="💾 Download TESS Results (CSV)",
-                                data=csv_data,
-                                file_name=f"module3_tess_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                mime="text/csv"
-                            )
-                        with col3:
-                            if st.button("🚀 Continue to Module 4", type="secondary"):
-                                st.session_state.pipeline_step = 4
+                            
+                            # Display certificate
+                            st.image(cert_png, use_container_width=True)
+                            
+                            # Download buttons for certificate and data
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.download_button(
+                                    label="📥 Download Certificate",
+                                    data=cert_png,
+                                    file_name=f"exomodule3_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
+                                    mime="image/png",
+                                    type="primary"
+                                )
+                            with col2:
+                                csv_data = tess_data.to_csv(index=False)
+                                st.download_button(
+                                    label="💾 Download TESS Results (CSV)",
+                                    data=csv_data,
+                                    file_name=f"module3_tess_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv"
+                                )
+                            with col3:
+                                if st.button("🚀 Continue to Module 4", type="secondary"):
+                                    st.session_state.pipeline_step = 4
+                                    st.rerun()
+                            
+                            # Reset button to start over
+                            st.markdown("---")
+                            if st.button("🔄 Reset Module 3", type="secondary"):
+                                st.session_state.module3_complete = False
+                                st.session_state.pipeline_data = None
+                                st.session_state.tess_report = None
                                 st.rerun()
-                        
-                        # Reset button to start over
-                        st.markdown("---")
-                        if st.button("🔄 Reset Module 3", type="secondary"):
-                            st.session_state.module3_complete = False
-                            st.session_state.pipeline_data = None
-                            st.session_state.tess_report = None
-                            st.rerun()
 
     # Module 4: Transit Detection
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:

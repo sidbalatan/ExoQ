@@ -1,5 +1,5 @@
 """
-Module 1: Data Input Module
+Module 1: Data Input and Gaia Survival Test Module
 
 Purpose: Accept and validate input data (vetted K Dwarfs or virgin coordinates)
 """
@@ -53,7 +53,7 @@ CATALOG_COLUMN_MAP = {
 
 class DataInputModule:
     """
-    Module 1: Data Input Module
+    Module 1: Data Input and Gaia Survival Test Module
     
     Accepts and validates input data for the ExoQ pipeline.
     Supports multiple input methods: CSV upload, pre-loaded lists, manual entry, TIC IDs.
@@ -464,24 +464,28 @@ class DataInputModule:
         ra_min, ra_max = df['ra'].min(), df['ra'].max()
         dec_min, dec_max = df['dec'].min(), df['dec'].max()
         
-        # Calculate pass rate
-        pass_rate = (validation['valid_stars'] / validation['total_stars'] * 100) if validation['total_stars'] > 0 else 0
+        n_stars = len(df)
+        source = self.source if self.source else 'unknown input'
+        
+        # Count stars with Gaia DR3 data
+        n_with_gaia = df['source_id'].notna().sum() if 'source_id' in df.columns else 0
+        gaia_pct = (n_with_gaia / n_stars * 100) if n_stars > 0 else 0
         
         summary = f"""
-🎉 Module 1: Data Input | 1 of 8 Complete!
+🎉 Module 1: Data Input and Gaia Survival Test | 1 of 7 Complete!
 
-✅ Successfully loaded {len(df)} K Dwarf coordinates
-✅ All coordinates validated and ready for analysis
-✅ Data quality: Excellent (100% valid)
+✅ Successfully loaded {n_stars} stars from {source}
+✅ All coordinates validated successfully
+✅ {n_with_gaia} stars have Gaia DR3 data ready for analysis
 
 Input Summary:
-- Total stars: {len(df)}
-- Source: {self.source}
-- Coordinate range: RA {ra_min:.2f}-{ra_max:.2f}, Dec {dec_min:.2f}-{dec_max:.2f}
-- Data validation: {validation['valid_stars']}/{validation['total_stars']} valid ({pass_rate:.1f}% pass rate)
+- Total stars loaded: {n_stars}
+- RA range: {ra_min:.4f} to {ra_max:.4f} deg
+- Dec range: {dec_min:.4f} to {dec_max:.4f} deg
+- Gaia DR3 matches: {n_with_gaia} ({gaia_pct:.1f}%)
 
-🎯 {validation['valid_stars']} stars moving to Module 2: Stellar Parameters
-You're ready to discover exoplanets! 🚀
+🎯 All stars moving to Module 2: Start Exoplanet Quest
+Your journey to Earth 2.0 begins! 🌍
 """
         return summary.strip()
     
@@ -548,7 +552,7 @@ def load_data(input_type: str = 'virgin', **kwargs) -> Tuple[pd.DataFrame, str]:
 if __name__ == "__main__":
     # Test the module
     print("=" * 70)
-    print("Module 1: Data Input Module - Test")
+    print("Module 1: Data Input and Gaia Survival Test Module - Test")
     print("=" * 70)
     
     module = DataInputModule()

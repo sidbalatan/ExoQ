@@ -89,10 +89,17 @@ class WorkspaceStore(Protocol):
     def load_run(self, user_id: str, run_id: str) -> RunRecord: ...
     def delete_run(self, user_id: str, run_id: str) -> None: ...
     def user_exists(self, user_id: str) -> bool: ...
-    def create_user(self, user_id: str, email: str, password_hash: str, pin: Optional[str] = None) -> None: ...
+    def create_user(self, user_id: str, email: str, password_hash: str, display_name: str, age: Optional[int] = None, gender: Optional[str] = None, country: Optional[str] = None, pin: Optional[str] = None) -> None: ...
     def verify_password(self, user_id: str, password: str) -> bool: ...
     def verify_pin(self, user_id: str, pin: str) -> bool: ...
     def get_user_email(self, user_id: str) -> Optional[str]: ...
+    def get_display_name(self, user_id: str) -> Optional[str]: ...
+    def get_gallery_posts_count(self, user_id: str) -> int: ...
+    def increment_gallery_posts(self, user_id: str) -> None: ...
+    def get_created_at(self, user_id: str) -> Optional[str]: ...
+    def update_profile(self, user_id: str, display_name: Optional[str] = None, age: Optional[int] = None, gender: Optional[str] = None, country: Optional[str] = None) -> None: ...
+    def save_user_progress(self, user_id: str, progress_data: Dict[str, Any]) -> None: ...
+    def load_user_progress(self, user_id: str) -> Optional[Dict[str, Any]]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +262,7 @@ class LocalFileStore:
             return False
         return (self.root / uid / "profile.json").exists()
 
-    def create_user(self, user_id: str, email: str, password_hash: str, pin: Optional[str] = None) -> None:
+    def create_user(self, user_id: str, email: str, password_hash: str, display_name: str, age: Optional[int] = None, gender: Optional[str] = None, country: Optional[str] = None, pin: Optional[str] = None) -> None:
         """Create the profile marker for a new account.
 
         Idempotent: writing twice keeps the original ``created_at`` so the
@@ -277,15 +284,30 @@ class LocalFileStore:
                 "user_id": uid,
                 "email": email,
                 "password_hash": password_hash,
+                "display_name": display_name,
                 "email_verified": False,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "schema_version": SCHEMA_VERSION,
             }
+            if age is not None:
+                existing["age"] = age
+            if gender:
+                existing["gender"] = gender
+            if country:
+                existing["country"] = country
         # Allow email and password updates without resetting created_at.
         if email:
             existing["email"] = email
         if password_hash:
             existing["password_hash"] = password_hash
+        if display_name:
+            existing["display_name"] = display_name
+        if age is not None:
+            existing["age"] = age
+        if gender:
+            existing["gender"] = gender
+        if country:
+            existing["country"] = country
         if pin is not None:
             existing["pin"] = pin
         prof.write_text(json.dumps(existing, indent=2), encoding="utf-8")
@@ -354,6 +376,101 @@ class LocalFileStore:
         try:
             profile = json.loads(prof.read_text(encoding="utf-8"))
             profile["email_verified"] = verified
+            prof.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def get_display_name(self, user_id: str) -> Optional[str]:
+        """Get the display name for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return None
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            return profile.get("display_name")
+        except Exception:
+            return None
+
+    def get_gallery_posts_count(self, user_id: str) -> int:
+        """Get the number of gallery posts for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return 0
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            return profile.get("gallery_posts", 0)
+        except Exception:
+            return 0
+
+    def increment_gallery_posts(self, user_id: str) -> None:
+        """Increment the gallery posts count for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            profile["gallery_posts"] = profile.get("gallery_posts", 0) + 1
+            prof.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def get_created_at(self, user_id: str) -> Optional[str]:
+        """Get the created_at timestamp for a user."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return None
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            return profile.get("created_at")
+        except Exception:
+            return None
+
+    def save_user_progress(self, user_id: str, progress_data: Dict[str, Any]) -> None:
+        """Save user progress (score, badges, analyzed_stars) to a JSON file."""
+        uid = normalize_user_id(user_id)
+        if not uid:
+            return
+        d = self._user_dir(uid)
+        progress_file = d / "progress.json"
+        try:
+            progress_file.write_text(json.dumps(progress_data, indent=2, default=str), encoding="utf-8")
+        except Exception as e:
+            raise Exception(f"Failed to save user progress: {e}")
+
+    def load_user_progress(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Load user progress from a JSON file."""
+        uid = normalize_user_id(user_id)
+        if not uid:
+            return None
+        d = self._user_dir(uid)
+        progress_file = d / "progress.json"
+        if not progress_file.exists():
+            return None
+        try:
+            return json.loads(progress_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise Exception(f"Failed to load user progress: {e}")
+
+    def update_profile(self, user_id: str, display_name: Optional[str] = None, age: Optional[int] = None, gender: Optional[str] = None, country: Optional[str] = None) -> None:
+        """Update user profile fields."""
+        uid = normalize_user_id(user_id)
+        prof = self._profile_path(uid)
+        if not prof.exists():
+            return
+        try:
+            profile = json.loads(prof.read_text(encoding="utf-8"))
+            if display_name is not None:
+                profile["display_name"] = display_name
+            if age is not None:
+                profile["age"] = age
+            if gender is not None:
+                profile["gender"] = gender
+            if country is not None:
+                profile["country"] = country
             prof.write_text(json.dumps(profile, indent=2), encoding="utf-8")
         except Exception:
             pass

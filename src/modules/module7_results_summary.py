@@ -77,7 +77,7 @@ class ResultsSummaryModule:
             'n_stars_passed_quality': len(df) if 'ruwe' not in df.columns else df['ruwe'].count(),
         }
         
-        # Stellar parameters
+        # Additional validation data
         if 'teff_gspphot' in df.columns:
             report['teff_range'] = (df['teff_gspphot'].min(), df['teff_gspphot'].max())
         
@@ -175,28 +175,34 @@ class ResultsSummaryModule:
         discoveries_text = ""
         for i, discovery in enumerate(report['top_discoveries'][:3], 1):
             discoveries_text += f"{i}. TIC {discovery['source_id']} - {discovery['description']}\n"
-        
         # Calculate pass rate
         passed_quality = report.get('n_stars_passed_quality', report['n_total_stars'])
         pass_rate = (passed_quality / report['n_total_stars'] * 100) if report['n_total_stars'] > 0 else 100
         
         summary = f"""
-🏆 Module 7: Results Summary | 7 of 8 Complete!
+📊 Module 6: Results Summary | 6 of 7 Complete!
 
-🎉 You've successfully analyzed {report['n_total_stars']} K Dwarf stars!
+✅ Generated comprehensive summary of all discoveries
+✅ Found {report['n_total_discoveries']} potential exoplanet candidates
+✅ {report['n_high_confidence']} high-confidence detections
 
-Key Achievements:
-✅ {passed_quality} stars passed all quality filters ({pass_rate:.1f}% pass rate)
-✅ {report.get('n_transit_candidates', 0)} exoplanet candidates detected
-✅ {report.get('n_highly_habitable', 0)} highly habitable targets identified
+**What Just Happened:**
+We compiled all the results from the previous modules into a comprehensive summary. We ranked discoveries by habitability, scientific interest, and detection confidence. The top discoveries list highlights the most promising Earth 2.0 candidates based on multiple criteria including ESI (Earth Similarity Index), stellar habitability scores, and transit signal quality.
 
-Top Discoveries:
-{discoveries_text}
+**Results Summary:**
+- Top discovery: {report['top_discovery']}
+- Average ESI: {report['average_esi']:.2f}
+- Stars with habitable planets: {report['n_habitable']}
+- Total data processed: {report['n_total_stars']} stars
 
-🎯 {report['n_total_stars']} stars moving to Module 8: Data Export
-Your contributions help humanity's quest for Earth 2.0! 🌍🚀
+**Live Data Preview:**
+The dataset now includes a 'top_discoveries' list with detailed descriptions of the most promising candidates, along with aggregated statistics for the entire run.
 
-Download your results using Module 8: Data Export
+**What to Expect in Module 7:**
+Finally, we'll export all your results in multiple formats (CSV, JSON) for sharing and further analysis. You'll get downloadable files containing the complete dataset with all the columns from each module, plus an export report with metadata about the run. This is your chance to save your discoveries and share them with the scientific community!
+
+🎯 All results moving to Module 7: Data Export
+Ready to share your discoveries with the world! 🌍
 """
         return summary.strip()
     

@@ -196,24 +196,36 @@ class DataExportModule:
         
         # Calculate pass rate (100% since export is final step)
         pass_rate = 100.0
+        exported_formats = ', '.join(report['files'].keys()).upper()
+        exported_size_mb = report['total_size_kb'] / 1024
         
         summary = f"""
-💾 Module 8: Data Export | 8 of 8 Complete!
+📤 Module 7: Data Export | 7 of 7 Complete!
 
-✅ Results exported successfully
-✅ {report['n_formats']} formats generated and ready for download
-✅ Pass rate: {pass_rate:.1f}% (all {report['n_rows_exported']} stars exported)
+✅ Successfully exported data in {report['n_formats']} format(s)
+✅ {report['n_rows_exported']} rows exported
+✅ {report['n_columns_exported']} columns included
 
-Export Summary:
-- Rows exported: {report['n_rows_exported']:,}
-- Columns exported: {report['n_columns_exported']}
-- Total size: {report['total_size_kb']:.1f} KB
+**What Just Happened:**
+We exported your complete dataset in multiple formats for sharing and further analysis. The CSV format is great for spreadsheet applications like Excel, while JSON is perfect for programmatic access and web applications. The export report includes metadata about the files generated, including sizes and record counts.
 
-Files Generated:
-{files_text}
+**Export Summary:**
+- Formats: {exported_formats}
+- File size: {exported_size_mb:.2f} MB
+- Export time: Not available
 
-🎉 Pipeline Complete! All {report['n_rows_exported']} stars successfully processed through all 8 modules.
-Your scientific data is saved and ready to share! 🎓
+**Live Data Preview:**
+Export files have been generated with all columns from the pipeline including coordinates, Gaia DR3 data, exoplanet cross-match results, TESS light curve metadata, transit detection results, and habitability scores.
+
+**What's Next:**
+Congratulations! You've completed the full ExoQ pipeline! Your data is ready for:
+- Further analysis in your preferred software
+- Sharing with collaborators or the scientific community
+- Publication in scientific journals
+- Follow-up observations with ground-based or space-based telescopes
+
+🎉 Pipeline Complete! All 7 modules finished successfully.
+Your data is ready for analysis and sharing! �
 """
         return summary.strip()
     

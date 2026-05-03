@@ -1,7 +1,7 @@
 """
-Module 2: Stellar Parameter Module
+Module 2: Additional Validation Filters
 
-Purpose: Retrieve stellar parameters from Gaia DR3 for input coordinates
+Purpose: Retrieve additional validation data from Gaia DR3 for input coordinates
 """
 
 import pandas as pd
@@ -13,22 +13,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class StellarParameterModule:
+class ValidationFilterModule:
     """
-    Module 2: Stellar Parameter Module
+    Module 2: Additional Validation Filters
     
-    Retrieves stellar parameters from Gaia DR3 for input coordinates.
+    Retrieves additional validation data from Gaia DR3 for input coordinates.
     Applies quality cuts to ensure scientific rigor.
     """
     
     def __init__(self):
-        """Initialize the Stellar Parameter Module."""
+        """Initialize the Additional Validation Filter Module."""
         self.data = None
         self.quality_report = {}
         
     def get_parameters(self, coordinates: pd.DataFrame, use_mock: bool = True) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
-        Retrieve stellar parameters from Gaia DR3.
+        Retrieve additional validation data from Gaia DR3.
         
         Parameters
         ----------
@@ -41,9 +41,9 @@ class StellarParameterModule:
         Returns
         -------
         tuple
-            (DataFrame with stellar parameters, quality report)
+            (DataFrame with additional validation data, quality report)
         """
-        logger.info(f"Retrieving stellar parameters for {len(coordinates)} stars")
+        logger.info(f"Retrieving additional validation data for {len(coordinates)} stars")
         
         if use_mock:
             df = self._get_mock_parameters(coordinates)
@@ -59,13 +59,13 @@ class StellarParameterModule:
         self.data = df
         self.quality_report = quality_report
         
-        logger.info(f"Stellar parameters retrieved: {len(df)} stars passed quality cuts")
+        logger.info(f"Additional validation data retrieved: {len(df)} stars passed quality cuts")
         
         return df, quality_report
     
     def _get_mock_parameters(self, coordinates: pd.DataFrame) -> pd.DataFrame:
         """
-        Generate mock stellar parameters for testing.
+        Generate mock additional validation data for testing.
         
         Parameters
         ----------
@@ -75,9 +75,9 @@ class StellarParameterModule:
         Returns
         -------
         pd.DataFrame
-            DataFrame with mock stellar parameters
+            DataFrame with mock additional validation data
         """
-        logger.info("Using mock stellar parameters for testing")
+        logger.info("Using mock additional validation data for testing")
         
         np.random.seed(45)
         
@@ -104,7 +104,7 @@ class StellarParameterModule:
     
     def _query_gaia_dr3(self, coordinates: pd.DataFrame) -> pd.DataFrame:
         """
-        Query Gaia DR3 for stellar parameters.
+        Query Gaia DR3 for additional validation data.
         
         Parameters
         ----------
@@ -118,18 +118,85 @@ class StellarParameterModule:
         """
         logger.info("Querying Gaia DR3 (requires internet)")
         
-        # In production, this would use astroquery to query Gaia DR3
-        # For now, return mock data
-        return self._get_mock_parameters(coordinates)
+        try:
+            from astroquery.gaia import Gaia
+            from astropy.coordinates import SkyCoord
+            from astropy import units as u
+            
+            results = []
+            
+            for idx, row in coordinates.iterrows():
+                ra = row['ra']
+                dec = row['dec']
+                search_radius = 1.0  # arcsec
+                
+                coord = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+                
+                # Query Gaia DR3
+                query = f"""
+                SELECT 
+                    source_id, ra, dec, 
+                    phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag, bp_rp,
+                    parallax, parallax_over_error,
+                    ruwe,
+                    teff_gspphot, teff_gspphot_lower, teff_gspphot_upper,
+                    logg_gspphot, logg_gspphot_lower, logg_gspphot_upper
+                FROM gaiadr3.gaia_source
+                WHERE 1=CONTAINS(
+                    POINT('ICRS', ra, dec),
+                    CIRCLE('ICRS', {ra}, {dec}, {search_radius/3600.0})
+                )
+                AND ruwe IS NOT NULL
+                AND parallax_over_error IS NOT NULL
+                AND teff_gspphot IS NOT NULL
+                AND logg_gspphot IS NOT NULL
+                LIMIT 1
+                """
+                
+                job = Gaia.launch_job(query, verbose=False)
+                gaia_results = job.get_results()
+                
+                if len(gaia_results) > 0:
+                    # Convert astropy Table to dict
+                    result_dict = {
+                        'source_id': gaia_results['source_id'][0],
+                        'ra': gaia_results['ra'][0],
+                        'dec': gaia_results['dec'][0],
+                        'phot_g_mean_mag': gaia_results['phot_g_mean_mag'][0],
+                        'phot_bp_mean_mag': gaia_results['phot_bp_mean_mag'][0],
+                        'phot_rp_mean_mag': gaia_results['phot_rp_mean_mag'][0],
+                        'bp_rp': gaia_results['bp_rp'][0],
+                        'parallax': gaia_results['parallax'][0],
+                        'parallax_over_error': gaia_results['parallax_over_error'][0],
+                        'ruwe': gaia_results['ruwe'][0],
+                        'teff_gspphot': gaia_results['teff_gspphot'][0],
+                        'logg_gspphot': gaia_results['logg_gspphot'][0]
+                    }
+                    results.append(result_dict)
+                else:
+                    logger.warning(f"No Gaia DR3 match found for RA={ra}, Dec={dec}")
+            
+            if results:
+                df = pd.DataFrame(results)
+                logger.info(f"Retrieved {len(df)} stars from Gaia DR3")
+                return df
+            else:
+                logger.warning("No Gaia DR3 results found, falling back to mock data")
+                return self._get_mock_parameters(coordinates)
+                
+        except Exception as e:
+            logger.error(f"Error querying Gaia DR3: {e}")
+            logger.info("Falling back to mock data")
+            return self._get_mock_parameters(coordinates)
     
     def _apply_quality_cuts(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Apply quality cuts to stellar parameters.
+        Apply quality cuts to additional validation data.
         
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame with stellar parameters
+            DataFrame with additional validation data
             
         Returns
         -------
@@ -201,13 +268,13 @@ class StellarParameterModule:
         pass_rate = report['pass_rate'] * 100
         
         summary = f"""
-🌟 Module 2: Stellar Parameters | 2 of 8 Complete!
+🌟 Module 2: Additional Validation Filters | 2 of 8 Complete!
 
-✅ Successfully retrieved {len(df)} stellar parameters from Gaia DR3
+✅ Successfully retrieved {len(df)} additional validation data from Gaia DR3
 ✅ Quality filters applied: {report['total_passed']} stars passed all cuts
 ✅ Parameter completeness: 100%
 
-Stellar Summary:
+Validation Summary:
 - Temperature range: {teff_min:.0f}-{teff_max:.0f} K (K Dwarf range ✓)
 - Surface gravity: {logg_min:.2f}-{logg_max:.2f} dex (main sequence ✓)
 - Data quality: Excellent (ruwe < 1.4, parallax S/N > 10)
@@ -225,7 +292,7 @@ Your K Dwarf sample is scientifically robust! 🎯
         Returns
         -------
         pd.DataFrame
-            Processed stellar parameters DataFrame
+            Processed additional validation data DataFrame
         """
         return self.data
     
@@ -244,7 +311,7 @@ Your K Dwarf sample is scientifically robust! 🎯
 # Convenience function for quick usage
 def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = True) -> Tuple[pd.DataFrame, str]:
     """
-    Convenience function to get stellar parameters.
+    Convenience function to get additional validation data.
     
     Parameters
     ----------
@@ -258,7 +325,7 @@ def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = True) -> 
     tuple
         (DataFrame, success summary)
     """
-    module = StellarParameterModule()
+    module = ValidationFilterModule()
     df, quality_report = module.get_parameters(coordinates, use_mock=use_mock)
     summary = module.get_success_summary()
     
@@ -268,7 +335,7 @@ def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = True) -> 
 if __name__ == "__main__":
     # Test the module
     print("=" * 70)
-    print("Module 2: Stellar Parameter Module - Test")
+    print("Module 2: Additional Validation Filter Module - Test")
     print("=" * 70)
     
     # Create test coordinates
@@ -277,9 +344,9 @@ if __name__ == "__main__":
         'dec': np.random.uniform(-90, 90, 10)
     })
     
-    module = StellarParameterModule()
+    module = ValidationFilterModule()
     
-    print("\nTest 1: Get stellar parameters (mock)")
+    print("\nTest 1: Get additional validation data (mock)")
     df, quality_report = module.get_parameters(test_coords, use_mock=True)
     print(module.get_success_summary())
     

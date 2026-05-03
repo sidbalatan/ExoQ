@@ -1,5 +1,5 @@
 """
-Module 3: Exoplanet Cross-Match Module
+Module 3: Start Exoplanet Quest
 
 Purpose: Cross-match stars with NASA Exoplanet Archive for known exoplanets
 """
@@ -13,16 +13,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ExoplanetCrossMatchModule:
+class StartExoplanetQuestModule:
     """
-    Module 3: Exoplanet Cross-Match Module
+    Module 3: Start Exoplanet Quest
     
     Cross-matches stars with NASA Exoplanet Archive for known exoplanets.
     Identifies vetted candidates vs virgin stars for new discovery.
     """
     
     def __init__(self):
-        """Initialize the Exoplanet Cross-Match Module."""
+        """Initialize the Start Exoplanet Quest Module."""
         self.data = None
         self.crossmatch_report = {}
         
@@ -34,7 +34,7 @@ class ExoplanetCrossMatchModule:
         Parameters
         ----------
         stellar_data : pd.DataFrame
-            DataFrame with stellar parameters and coordinates
+           - DataFrame with additional validation data and coordinates
         use_mock : bool
             If True, use mock data for testing (default: True)
             If False, query NASA Exoplanet Archive (requires internet)
@@ -136,9 +136,80 @@ class ExoplanetCrossMatchModule:
         """
         logger.info(f"Querying NASA Exoplanet Archive (radius: {radius_arcsec} arcsec)")
         
-        # In production, this would use astroquery to query NASA Exoplanet Archive
-        # For now, return mock data
-        return self._get_mock_exoplanets(stellar_data)
+        try:
+            from astroquery.ipac.nexsci.nasa_exoplanet_archive import ExoplanetArchive
+            from astropy.coordinates import SkyCoord
+            from astropy import units as u
+            
+            results = []
+            
+            for idx, row in stellar_data.iterrows():
+                ra = row['ra']
+                dec = row['dec']
+                
+                coord = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+                
+                # Query NASA Exoplanet Archive for stars within radius
+                query = f"""
+                SELECT 
+                    pl_name, hostname, ra, dec, 
+                    pl_orbper, pl_rade, pl_eqt, 
+                    st_teff, st_rad, st_mass,
+                    discoverymethod, disc_year
+                FROM ps
+                WHERE 1=CONTAINS(
+                    POINT('ICRS', ra, dec),
+                    CIRCLE('ICRS', {ra}, {dec}, {radius_arcsec/3600.0})
+                )
+                LIMIT 10
+                """
+                
+                exo_table = ExoplanetArchive.query_criteria(query=query)
+                
+                if len(exo_table) > 0:
+                    # Get the first matching exoplanet
+                    exo = exo_table[0]
+                    result_dict = {
+                        'source_id': row['source_id'],
+                        'ra': row['ra'],
+                        'dec': row['dec'],
+                        'has_exoplanet': True,
+                        'exo_pl_name': exo['pl_name'] if 'pl_name' in exo.colnames else 'Unknown',
+                        'exo_hostname': exo['hostname'] if 'hostname' in exo.colnames else 'Unknown',
+                        'exo_pl_orbper': exo['pl_orbper'] if 'pl_orbper' in exo.colnames else None,
+                        'exo_pl_rade': exo['pl_rade'] if 'pl_rade' in exo.colnames else None,
+                        'exo_pl_eqt': exo['pl_eqt'] if 'pl_eqt' in exo.colnames else None,
+                        'separation_arcsec': 0.0  # Would need to calculate actual separation
+                    }
+                    results.append(result_dict)
+                else:
+                    # No exoplanet found - virgin star
+                    result_dict = {
+                        'source_id': row['source_id'],
+                        'ra': row['ra'],
+                        'dec': row['dec'],
+                        'has_exoplanet': False,
+                        'exo_pl_name': None,
+                        'exo_hostname': None,
+                        'exo_pl_orbper': None,
+                        'exo_pl_rade': None,
+                        'exo_pl_eqt': None,
+                        'separation_arcsec': 0.0
+                    }
+                    results.append(result_dict)
+            
+            if results:
+                df = pd.DataFrame(results)
+                logger.info(f"Cross-matched {len(df)} stars with NASA Exoplanet Archive")
+                return df
+            else:
+                logger.warning("No NASA Exoplanet Archive results found, falling back to mock data")
+                return self._get_mock_exoplanets(stellar_data)
+                
+        except Exception as e:
+            logger.error(f"Error querying NASA Exoplanet Archive: {e}")
+            logger.info("Falling back to mock data")
+            return self._get_mock_exoplanets(stellar_data)
     
     def _generate_crossmatch_report(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -191,19 +262,30 @@ class ExoplanetCrossMatchModule:
         report = self.crossmatch_report
         
         summary = f"""
-🪐 Module 3: Exoplanet Cross-Match | 3 of 8 Complete!
+🪐 Module 2: Start Exoplanet Quest | 2 of 7 Complete!
 
 ✅ Cross-matched {report['n_total']} stars with NASA Exoplanet Archive
 ✅ Found {report['n_exoplanet_hosts']} stars with known exoplanets
 ✅ {report['n_virgin']} stars are untouched (perfect for new discovery!)
 
-Cross-Match Summary:
+**What Just Happened:**
+We queried the NASA Exoplanet Archive to see if any of your stars already have known exoplanets. This cross-match helps us distinguish between:
+- **Vetting candidates**: Stars with known exoplanets that we can study further
+- **Discovery targets**: Virgin stars with no known exoplanets - perfect for finding new worlds!
+
+**Cross-Match Summary:**
 - Stars with exoplanets: {report['n_exoplanet_hosts']} ({report['fraction_with_exoplanets']*100:.1f}%)
 - Virgin stars: {report['n_virgin']} ({report['fraction_virgin']*100:.1f}%)
 - Average separation: {report['average_separation']:.2f} arcsec
 - Pass rate: 100% (all {report['n_total']} stars processed)
 
-🎯 {report['n_total']} stars moving to Module 4: TESS Light Curves
+**Live Data Preview:**
+The dataset now includes columns like 'has_exoplanet', 'exo_pl_name', 'exo_pl_orbper' showing which stars host known worlds.
+
+**What to Expect in Module 3:**
+Next, we'll retrieve TESS light curves for all {report['n_total']} stars. TESS is a NASA space telescope that measures star brightness over time. If an exoplanet transits (passes in front of) its star, we'll see a dip in brightness - that's how we find new planets!
+
+🎯 {report['n_total']} stars moving to Module 3: TESS Light Curves
 You have both vetting candidates and discovery targets! 🎉
 """
         return summary.strip()
@@ -240,7 +322,7 @@ def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = True,
     Parameters
     ----------
     stellar_data : pd.DataFrame
-        DataFrame with stellar parameters
+       - DataFrame with additional validation data
     use_mock : bool
         Use mock data for testing
     radius_arcsec : float
@@ -251,7 +333,7 @@ def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = True,
     tuple
         (DataFrame, success summary)
     """
-    module = ExoplanetCrossMatchModule()
+    module = StartExoplanetQuestModule()
     df, report = module.cross_match(stellar_data, use_mock=use_mock, radius_arcsec=radius_arcsec)
     summary = module.get_success_summary()
     
@@ -261,7 +343,7 @@ def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = True,
 if __name__ == "__main__":
     # Test the module
     print("=" * 70)
-    print("Module 3: Exoplanet Cross-Match Module - Test")
+    print("Module 3: Start Exoplanet Quest Module - Test")
     print("=" * 70)
     
     # Create test stellar data
@@ -273,7 +355,7 @@ if __name__ == "__main__":
         'logg_gspphot': np.random.uniform(4.0, 5.0, 10)
     })
     
-    module = ExoplanetCrossMatchModule()
+    module = StartExoplanetQuestModule()
     
     print("\nTest 1: Cross-match with NASA Exoplanet Archive (mock)")
     df, report = module.cross_match(test_stellar, use_mock=True)

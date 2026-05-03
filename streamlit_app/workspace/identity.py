@@ -11,6 +11,7 @@ This module is intentionally thin so we can later replace it with
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 import streamlit as st
@@ -22,6 +23,7 @@ from .email_service import generate_verification_code, send_verification_email
 
 SESSION_KEY = "exoq_user_id"
 SESSION_EMAIL_KEY = "exoq_user_email"
+SESSION_DISPLAY_NAME_KEY = "exoq_user_display_name"
 
 
 # ---------------------------------------------------------------------------
@@ -37,15 +39,80 @@ def current_email() -> str:
     return st.session_state.get(SESSION_EMAIL_KEY, "")
 
 
+def current_display_name() -> str:
+    """Return the user's display name for certificates."""
+    return st.session_state.get(SESSION_DISPLAY_NAME_KEY, "")
+
+
 def sign_out() -> None:
     """Clear the in-session identity. Per-user files are left intact on disk."""
     st.session_state.pop(SESSION_KEY, None)
     st.session_state.pop(SESSION_EMAIL_KEY, None)
+    st.session_state.pop(SESSION_DISPLAY_NAME_KEY, None)
+    # Clear user progress from session
+    st.session_state.pop('score', None)
+    st.session_state.pop('badges', None)
+    st.session_state.pop('analyzed_stars', None)
+    st.session_state.pop('streak', None)
+    st.session_state.pop('predictions', None)
 
 
-def _set_session(uid: str, email: str) -> None:
+def _set_session(uid: str, email: str, display_name: str = "") -> None:
     st.session_state[SESSION_KEY] = uid
     st.session_state[SESSION_EMAIL_KEY] = email
+    st.session_state[SESSION_DISPLAY_NAME_KEY] = display_name
+
+
+# ---------------------------------------------------------------------------
+# User progress persistence
+# ---------------------------------------------------------------------------
+def save_user_progress() -> None:
+    """Save user progress (score, badges, analyzed_stars) to persistent storage."""
+    uid = current_user()
+    if not uid:
+        return
+    
+    store = get_store()
+    progress_data = {
+        'score': st.session_state.get('score', 0),
+        'badges': st.session_state.get('badges', []),
+        'analyzed_stars': st.session_state.get('analyzed_stars', []),
+        'streak': st.session_state.get('streak', 0),
+        'predictions': st.session_state.get('predictions', {}),
+        'last_updated': datetime.now().isoformat()
+    }
+    
+    try:
+        store.save_user_progress(uid, progress_data)
+    except Exception as e:
+        # Don't fail the app if we can't save progress
+        print(f"Warning: Failed to save user progress: {e}")
+
+
+def load_user_progress() -> None:
+    """Load user progress from persistent storage into session state."""
+    uid = current_user()
+    if not uid:
+        return
+    
+    store = get_store()
+    try:
+        progress_data = store.load_user_progress(uid)
+        if progress_data:
+            st.session_state.score = progress_data.get('score', 0)
+            st.session_state.badges = progress_data.get('badges', [])
+            st.session_state.analyzed_stars = progress_data.get('analyzed_stars', [])
+            st.session_state.streak = progress_data.get('streak', 0)
+            st.session_state.predictions = progress_data.get('predictions', {})
+    except Exception as e:
+        # Don't fail the app if we can't load progress
+        print(f"Warning: Failed to load user progress: {e}")
+        # Initialize with defaults if loading fails
+        st.session_state.score = 0
+        st.session_state.badges = []
+        st.session_state.analyzed_stars = []
+        st.session_state.streak = 0
+        st.session_state.predictions = {}
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +132,7 @@ def _sign_in_form(form_key: str = "exoq_signin_form") -> None:
             type="password",
             key=f"{form_key}_password",
             help="Your account password.",
+            autocomplete="off",
         )
         submitted = st.form_submit_button("Sign in", type="primary")
 
@@ -103,8 +171,12 @@ def _sign_in_form(form_key: str = "exoq_signin_form") -> None:
         )
         return
 
-    _set_session(uid, email)
-    st.success(f"Welcome back, {email}.")
+    # Load display name from profile
+    display_name = store.get_display_name(uid) or ""
+    _set_session(uid, email, display_name)
+    # Load user progress
+    load_user_progress()
+    st.success(f"Welcome back, {display_name or email}.")
     st.rerun()
 
 
@@ -138,11 +210,17 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
                 # Check code without requiring existing user
                 if store.verify_code(pending_uid, verification_code):
                     # Now create the user after verification
-                    store.create_user(pending_uid, pending_email, pending_password_hash, pending_pin)
+                    pending_display_name = pending_data.get("display_name", "")
+                    pending_age = pending_data.get("age")
+                    pending_gender = pending_data.get("gender")
+                    pending_country = pending_data.get("country")
+                    store.create_user(pending_uid, pending_email, pending_password_hash, pending_display_name, pending_age, pending_gender, pending_country, pending_pin)
                     store.set_email_verified(pending_uid, True)
                     # Clean up pending verification file
                     store.cleanup_pending_verification(pending_uid)
-                    _set_session(pending_uid, pending_email)
+                    _set_session(pending_uid, pending_email, pending_display_name)
+                    # Load user progress (will initialize with defaults for new users)
+                    load_user_progress()
                     # Clear pending state
                     st.session_state.pop(f"{form_key}_pending_email", None)
                     st.session_state.pop(f"{form_key}_pending_uid", None)
@@ -186,16 +264,44 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
             key=f"{form_key}_email",
             help="Your email will be your login identifier.",
         )
+        display_name = st.text_input(
+            "Display Name",
+            placeholder="Your full name or username",
+            key=f"{form_key}_display_name",
+            help="This will appear on your K Dwarf Processing and Exoplanet Discovery Certificate.",
+        )
+        age = st.number_input(
+            "Age (optional)",
+            min_value=13,
+            max_value=120,
+            value=None,
+            key=f"{form_key}_age",
+            help="Optional demographic information.",
+        )
+        gender = st.selectbox(
+            "Gender (optional)",
+            options=["Prefer not to say", "Male", "Female", "Non-binary", "Other"],
+            key=f"{form_key}_gender",
+            help="Optional demographic information.",
+        )
+        country = st.text_input(
+            "Country (optional)",
+            placeholder="e.g., Philippines",
+            key=f"{form_key}_country",
+            help="Optional demographic information.",
+        )
         password = st.text_input(
             "Password",
             type="password",
             key=f"{form_key}_password",
             help="Choose a strong password (min 8 characters).",
+            autocomplete="new-password",
         )
         confirm_password = st.text_input(
             "Confirm Password",
             type="password",
             key=f"{form_key}_confirm_password",
+            autocomplete="new-password",
         )
         pin = st.text_input(
             "PIN (optional)",
@@ -219,6 +325,11 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
     uid = normalize_user_id(email)
     if not uid:
         st.warning("Invalid email address.")
+        return
+
+    # Validate display name (required)
+    if not display_name or not display_name.strip():
+        st.error("Display Name is required. This will appear on your certificate.")
         return
 
     # Validate password
@@ -257,7 +368,11 @@ def _sign_up_form(form_key: str = "exoq_signup_form") -> None:
         "uid": uid,
         "email": email,
         "password_hash": password_hash,
-        "pin": pin if pin else None
+        "pin": pin if pin else None,
+        "display_name": display_name.strip(),
+        "age": age if age else None,
+        "gender": gender if gender != "Prefer not to say" else None,
+        "country": country.strip() if country else None,
     }
     
     # Try to send verification email

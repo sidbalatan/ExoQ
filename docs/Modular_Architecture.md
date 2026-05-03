@@ -18,49 +18,43 @@
         ▼                   ▼                   ▼
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
 │  Module 0    │   │  Module 1    │   │  Module 2    │
-│  User Home   │───▶│  Data Input  │───▶│  Stellar     │
-│  Page        │   │              │   │  Parameters  │
+│  (Home Page) │   │  (Data Input)│   │  (Exoplanet) │
+│  Page        │   │              │   │  Quest)      │
 └──────────────┘   └──────────────┘   └──────────────┘
                             │
                             ▼
                   ┌──────────────┐
                   │  Module 3    │
-                  │  Exoplanet   │
-                  │  Cross-Match │
-                  └──────────────┘
-                            │
-                            ▼
-                  ┌──────────────┐
-                  │  Module 4    │
                   │  TESS Light  │
                   │  Curves      │
                   └──────────────┘
                             │
                             ▼
                   ┌──────────────┐
-                  │  Module 5    │
+                  │  Module 4    │
                   │  Transit     │
                   │  Detection   │
                   └──────────────┘
                             │
                             ▼
                   ┌──────────────┐
-                  │  Module 6    │
-                  │  Habitability │
+                  │  Module 5    │
+                  │  Habitability│
                   │  Scoring     │
                   └──────────────┘
                             │
                             ▼
                   ┌──────────────┐
-                  │  Module 7    │
+                  │  Module 6    │
                   │  Results     │
                   │  Summary     │
                   └──────────────┘
                             │
                             ▼
                   ┌──────────────┐
-                  │  Module 8    │
-                  │  Data Export │
+                  │  Module 7    │
+                  │  Data        │
+                  │  Export      │
                   └──────────────┘
 ```
 
@@ -96,14 +90,13 @@
 - Module access buttons
 
 **Navigation:**
-- Module 1: Data Input
-- Module 2: Stellar Parameters
-- Module 3: Exoplanet Cross-Match
-- Module 4: TESS Light Curves
-- Module 5: Transit Detection
-- Module 6: Habitability Scoring
-- Module 7: Results Summary
-- Module 8: Data Export
+- Module 1: Data Input and Gaia Survival Test
+- Module 2: Start Exoplanet Quest
+- Module 3: TESS Light Curves
+- Module 4: Transit Detection
+- Module 5: Habitability Scoring
+- Module 6: Results Summary
+- Module 7: Data Export
 - ExoQ Hunter Game
 - Community Gallery
 - Personal Dashboard
@@ -145,7 +138,7 @@ streamlit_app/
 
 ---
 
-## Module 1: Data Input Module
+## Module 1: Data Input and Gaia Survival Test Module
 
 **Purpose:** Accept and validate input data (vetted K Dwarfs or virgin coordinates)
 
@@ -193,209 +186,327 @@ src/modules/
 
 ---
 
-## Module 2: Stellar Parameter Module
+## Module 2: Start Exoplanet Quest Module
 
-**Purpose:** Retrieve stellar parameters from Gaia DR3 for input coordinates
+**Purpose:** Cross-match stars with NASA Exoplanet Archive to identify known exoplanet hosts and virgin discovery targets
 
 **Inputs:**
-- DataFrame with coordinates (RA, Dec) or TIC IDs
-- Optional: Maximum radius for query (arcseconds)
+- DataFrame with stellar parameters (from Module 1)
+- Optional: Search radius for cross-match (arcseconds)
 
 **Outputs:**
-- DataFrame with Gaia DR3 parameters
-- Stellar quality metrics
-- Parameter completeness report
+- DataFrame with exoplanet cross-match results
+- Cross-match statistics (hosts, virgin stars, separation)
 
-**Parameters Retrieved:**
-- source_id, ra, dec
-- teff_gspphot (effective temperature)
-- logg_gspphot (surface gravity)
-- bp_rp (color)
-- ruwe (renormalized unit weight error)
-- parallax, parallax_over_error
-- phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag
-
-**Quality Cuts:**
-- ruwe < 1.4
-- parallax_over_error > 10
-- teff_gspphot between 3700-5200 K (K Dwarf range)
-- logg_gspphot > 4.0 (main sequence)
+**Key Features:**
+- Spatial query against NASA Exoplanet Archive
+- Identification of known exoplanet hosts
+- Flagging of virgin stars for new discovery
+- Separation distance calculation
 
 **Success Summary (Congratulatory Tone):**
 ```
-🌟 Stellar Parameters Retrieved!
+🪐 Module 2: Start Exoplanet Quest | 2 of 7 Complete!
 
-✅ Successfully retrieved [N] stellar parameters from Gaia DR3
-✅ Quality filters applied: [X] stars passed all cuts
-✅ Parameter completeness: [X]%
-
-Stellar Summary:
-- Temperature range: [min-max] K (K Dwarf range ✓)
-- Surface gravity: [min-max] dex (main sequence ✓)
-- Data quality: Excellent (ruwe < 1.4, parallax S/N > 10)
-
-Your K Dwarf sample is scientifically robust! 🎯
-```
-
-**File Structure:**
-```
-src/modules/
-├── module2_stellar_parameters.py
-└── tests/
-    └── test_module2_stellar_parameters.py
-```
-
----
-
-## Module 3: Exoplanet Cross-Match Module
-
-**Purpose:** Cross-match stars with NASA Exoplanet Archive for known exoplanets
-
-**Inputs:**
-- DataFrame with stellar parameters and coordinates
-- Cross-match radius (default: 2 arcseconds)
-
-**Outputs:**
-- DataFrame with exoplanet information
-- Cross-match statistics
-- Known exoplanet list
-
-**Cross-Match Process:**
-1. Query NASA Exoplanet Archive for stars within radius
-2. Match by position (RA, Dec)
-3. Retrieve exoplanet parameters:
-   - pl_name (planet name)
-   - pl_orbper (orbital period)
-   - pl_rade (radius in Earth radii)
-   - pl_eqt (equilibrium temperature)
-   - st_refname (host star reference)
-
-**Success Summary (Congratulatory Tone):**
-```
-🪐 Exoplanet Cross-Match Complete!
-
-✅ Cross-matched [N] stars with NASA Exoplanet Archive
-✅ Found [X] stars with known exoplanets
-✅ [Y] stars are untouched (perfect for new discovery!)
+✅ Cross-matched N stars with NASA Exoplanet Archive
+✅ Found M stars with known exoplanets
+✅ V stars are untouched (perfect for new discovery!)
 
 Cross-Match Summary:
-- Stars with exoplanets: [X] ([X%])
-- Virgin stars: [Y] ([Y%])
-- Average separation: [X] arcsec
+- Stars with exoplanets: M (X%)
+- Virgin stars: V (Y%)
+- Average separation: Z arcsec
+- Pass rate: 100% (all N stars processed)
 
+🎯 N stars moving to Module 3: TESS Light Curves
 You have both vetting candidates and discovery targets! 🎉
 ```
 
 **File Structure:**
 ```
 src/modules/
-├── module3_exoplanet_crossmatch.py
+├── module2_exoplanet_crossmatch.py
 └── tests/
-    └── test_module3_exoplanet_crossmatch.py
+    └── test_module2_exoplanet_crossmatch.py
 ```
 
 ---
 
-## Module 4: TESS Light Curve Module
+## Module 3: TESS Light Curve Module
 
-**Purpose:** Retrieve TESS light curves for input stars
+**Purpose:** Download TESS light curves for target stars from MAST API
 
 **Inputs:**
-- DataFrame with TIC IDs or coordinates
-- Optional: Sectors to query (default: all available)
+- DataFrame with stellar coordinates (from Module 2)
+- Optional: Sector selection, data quality filters
 
 **Outputs:**
-- Light curve data (time, flux, flux_err)
-- Light curve metadata
-- Download statistics
+- DataFrame with light curve metadata
+- Downloaded light curve files
+- Quality assessment metrics
 
-**Data Sources:**
-- MAST API (TESS mission)
-- lightkurve package for download
+**Key Features:**
+- MAST API query for TESS observations
+- Light curve product filtering
+- Sector coverage analysis
+- Data quality assessment
 
 **Success Summary (Congratulatory Tone):**
 ```
-📈 TESS Light Curves Retrieved!
+📈 Module 3: TESS Light Curves | 3 of 7 Complete!
 
-✅ Successfully downloaded [N] light curves from TESS
-✅ Total observation time: [X] days
+✅ Successfully downloaded N light curves from TESS
+✅ Total observation time: X days
 ✅ Data quality: Excellent (low noise, good coverage)
 
 Light Curve Summary:
-- Sectors covered: [X]
-- Average cadence: [X] minutes
-- Data points per star: [X]
+- Sectors covered: X
+- Average cadence: Y minutes
+- Data points per star: Z
+- Pass rate: P% (N/M stars with TESS data)
 
+🎯 N stars moving to Module 4: Transit Detection
 You're ready to hunt for transits! 🔭
 ```
 
 **File Structure:**
 ```
 src/modules/
-├── module4_tess_lightcurves.py
+├── module3_tess_lightcurves.py
 └── tests/
-    └── test_module4_tess_lightcurves.py
+    └── test_module3_tess_lightcurves.py
 ```
 
 ---
 
-## Module 5: Transit Detection Module
+## Module 4: Transit Detection Module
 
-**Purpose:** Detect transit signals in light curves using BLS periodogram
+**Purpose:** Detect transit signals in TESS light curves using BLS periodogram
 
 **Inputs:**
-- Light curve data (time, flux, flux_err)
-- Optional: BLS parameters (period range, frequency grid)
+- DataFrame with light curve data (from Module 3)
+- Optional: Period range, transit duration range
 
 **Outputs:**
-- Transit candidates
-- BLS periodogram results
-- Detection statistics
+- DataFrame with transit candidates
+- Detection statistics (candidates, S/N, periods)
+- Periodogram plots
 
-**Detection Method:**
+**Key Features:**
 - Box Least Squares (BLS) periodogram
-- Signal-to-noise ratio (S/N) calculation
-- False alarm probability (FAP) calculation
-
-**Parameters:**
-- Period range: 0.5 - 30 days (typical for Earth-sized planets)
-- Frequency grid: 100,000 points
-- Minimum S/N: 6.0
-- Maximum FAP: 0.01
+- Signal-to-noise ratio calculation
+- False alarm probability (FAP) assessment
+- Period and duration estimation
 
 **Success Summary (Congratulatory Tone):**
 ```
-🎯 Transit Detection Complete!
+🎯 Module 4: Transit Detection | 4 of 7 Complete!
 
-✅ Analyzed [N] light curves
-✅ Detected [X] transit candidates
-✅ [Y] candidates passed quality thresholds
+✅ Analyzed N light curves
+✅ Detected M transit candidates
+✅ K candidates passed quality thresholds
 
 Detection Summary:
-- Candidates with S/N > 6: [X]
-- Average period: [X] days
-- Average depth: [X]%
-- Most promising: [TIC ID] (S/N = [X])
+- Best candidate: TIC XXX (S/N = Y)
+- Average period: Z days
+- Average depth: W%
+- Pass rate: P% (K/N candidates passed)
 
-You've found potential exoplanets! 🌍
+🎯 K transit candidates moving to Module 5: Habitability Scoring
+Exciting potential discoveries! �
 ```
 
 **File Structure:**
 ```
 src/modules/
-├── module5_transit_detection.py
+├── module4_transit_detection.py
 └── tests/
-    └── test_module5_transit_detection.py
+    └── test_module4_transit_detection.py
 ```
 
 ---
 
-## Module 6: Habitability Scoring Module
+## Module 5: Habitability Scoring Module
 
-**Purpose:** Score habitability of stars and exoplanet candidates
+**Purpose:** Score stellar and exoplanet habitability using multiple metrics
 
 **Inputs:**
-- DataFrame with stellar parameters
+- DataFrame with transit candidates (from Module 4)
+- Stellar parameters from Module 1
+
+**Outputs:**
+- DataFrame with habitability scores
+- Earth Similarity Index (ESI)
+- Habitable zone analysis
+**Key Features:**
+- Stellar habitability scoring
+- Earth Similarity Index (ESI) calculation
+- Habitable zone assessment
+- Multi-metric ranking
+
+**Success Summary (Congratulatory Tone):**
+```
+💧 Module 5: Habitability Scoring | 5 of 7 Complete!
+
+✅ Scored N stars for habitability
+✅ M stars are highly habitable (score > 0.8)
+✅ K exoplanet candidates in habitable zone
+
+Habitability Summary:
+- Best host star: TIC XXX (score = Y)
+- Most Earth-like planet: ESI = Z
+- Habitable zone candidates: K
+- Pass rate: P% (M/N stars highly habitable)
+
+🎯 N stars moving to Module 6: Results Summary
+Your discoveries are ready for the final report! 📊
+```
+
+**File Structure:**
+```
+src/modules/
+├── module5_habitability_scoring.py
+└── tests/
+    └── test_module5_habitability_scoring.py
+```
+
+---
+
+## Module 6: Results Summary Module
+
+**Purpose:** Generate comprehensive summary of all discoveries and findings
+
+**Inputs:**
+- DataFrame with all processed data from previous modules
+
+**Outputs:**
+- Summary report with key statistics
+- Top discoveries list
+- Visualizations and plots
+
+**Key Features:**
+- Discovery ranking
+- Statistical analysis
+- Visualization generation
+- Report compilation
+
+**Success Summary (Congratulatory Tone):**
+```
+📊 Module 6: Results Summary | 6 of 7 Complete!
+
+✅ Generated comprehensive summary of all discoveries
+✅ Found N potential exoplanet candidates
+✅ M high-confidence detections
+
+Results Summary:
+- Top discovery: TIC XXX
+- Average ESI: Y
+- Stars with habitable planets: Z
+- Total data processed: W stars
+
+🎯 All results moving to Module 7: Data Export
+Ready to share your discoveries with the world! 🌍
+```
+
+**File Structure:**
+```
+src/modules/
+├── module6_results_summary.py
+└── tests/
+    └── test_module6_results_summary.py
+```
+
+---
+
+## Module 7: Data Export Module
+
+**Purpose:** Export processed data in multiple formats for sharing and analysis
+
+**Inputs:**
+- DataFrame with final results from all modules
+- Export format preferences (CSV, JSON, FITS)
+
+**Outputs:**
+- Exported data files
+- Export report with metadata
+- Downloadable files
+
+**Key Features:**
+- Multiple format support (CSV, JSON, FITS)
+- Metadata preservation
+- Batch export capabilities
+- File compression options
+
+**Success Summary (Congratulatory Tone):**
+```
+📤 Module 7: Data Export | 7 of 7 Complete!
+
+✅ Successfully exported data in N format(s)
+✅ M rows exported
+✅ K columns included
+
+Export Summary:
+- Formats: CSV, JSON
+- File size: X MB
+- Export time: Y seconds
+
+🎉 Pipeline Complete! All 7 modules finished successfully.
+Your data is ready for analysis and sharing! 🌍
+```
+
+**File Structure:**
+```
+src/modules/
+├── module7_data_export.py
+└── tests/
+    └── test_module7_data_export.py
+```
+
+---
+
+## File Structure Overview
+
+```
+ExoQ/
+├── src/
+│   ├── modules/
+│   │   ├── module1_data_input.py
+│   │   ├── module2_exoplanet_crossmatch.py
+│   │   ├── module3_tess_lightcurves.py
+│   │   ├── module4_transit_detection.py
+│   │   ├── module5_habitability_scoring.py
+│   │   ├── module6_results_summary.py
+│   │   └── module7_data_export.py
+│   └── tests/
+│       └── test_*.py
+├── streamlit_app/
+│   ├── Home.py (Module 0)
+│   └── pages/
+│       ├── 2_My_Workspace.py
+│       └── 3_Community_Gallery.py
+├── docs/
+│   └── Modular_Architecture.md
+└── notebooks/
+    └── pipeline_tutorial.ipynb
+```
+
+---
+
+## Development Priority
+
+1. **Module 0: User Home Page** (UI foundation, navigation hub)
+2. Module 1: Data Input and Gaia Survival Test (foundational)
+3. Module 2: Start Exoplanet Quest (builds on Module 1)
+4. Module 6: Results Summary (can test with dummy data)
+5. Module 3: TESS Light Curves (builds on Module 2)
+6. Module 4: Transit Detection (builds on Module 3)
+7. Module 5: Habitability Scoring (builds on Module 2, 4)
+8. Module 7: Data Export (builds on all modules)
+
+---
+
+## Module Dependencies**
+- DataFrame with additional validation data
 - DataFrame with exoplanet candidates (from Module 3 or 5)
 
 **Outputs:**
@@ -649,8 +760,8 @@ summary = module7_results_summary.generate(habitability)
    - Quick stats display
 
 **Phase 1: Core Data Flow**
-2. Module 1: Data Input (foundational)
-3. Module 2: Stellar Parameters (builds on Module 1)
+2. Module 1: Data Input and Gaia Survival Test (foundational)
+3. Module 2: Additional Validation Filters (builds on Module 1)
 4. Module 7: Results Summary (can test with dummy data)
 
 **Phase 2: Exoplanet Detection**

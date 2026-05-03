@@ -33,7 +33,7 @@ class HabitabilityScoringModule:
         Parameters
         ----------
         stellar_data : pd.DataFrame
-            DataFrame with stellar parameters
+            DataFrame with additional validation data
         transit_data : pd.DataFrame, optional
             DataFrame with transit detection results
             
@@ -98,12 +98,12 @@ class HabitabilityScoringModule:
     
     def _score_stellar_habitability(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Score stellar habitability based on stellar parameters.
+        Score stellar habitability based on additional validation data.
         
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame with stellar parameters
+            DataFrame with additional validation data
             
         Returns
         -------
@@ -359,11 +359,14 @@ class HabitabilityScoringModule:
         pass_rate = (report['n_highly_habitable'] / report['n_total'] * 100) if report['n_total'] > 0 else 0
         
         summary = f"""
-💧 Module 6: Habitability Scoring | 6 of 8 Complete!
+ Module 5: Habitability Scoring | 5 of 7 Complete!
 
-✅ Scored {report['n_total']} stars for habitability
-✅ {report['n_highly_habitable']} stars are highly habitable (score > 0.8)
-✅ {report['n_habitable_exo']} exoplanet candidates in habitable zone
+ Scored {report['n_total']} stars for habitability
+ {report['n_highly_habitable']} stars are highly habitable (score > 0.8)
+ {report['n_habitable_exo']} exoplanet candidates in habitable zone
+
+What Just Happened:
+We calculated habitability scores for both stars and exoplanet candidates. For stars, we evaluated factors like temperature, surface gravity, metallicity, and activity. For planets, we calculated the Earth Similarity Index (ESI), which compares a planet to Earth based on radius, temperature, and other properties. We also checked if planets are in the habitable zone - the region around a star where liquid water could exist.
 
 Habitability Summary:
 - Best host star: TIC {report['best_star_id']} (score = {report['best_star_score']:.2f})
@@ -371,8 +374,14 @@ Habitability Summary:
 - Habitable zone candidates: {report['n_habitable_exo']}
 - Pass rate: {pass_rate:.1f}% ({report['n_highly_habitable']}/{report['n_total']} stars highly habitable)
 
-🎯 {report['n_total']} stars moving to Module 7: Results Summary
-You've found potential Earth 2.0 candidates! 🌏
+Live Data Preview:
+The dataset now includes 'stellar_hab_score', 'exo_hab_score', 'esi' columns showing habitability metrics for each star and planet candidate.
+
+What to Expect in Module 6:
+Next, we'll generate a comprehensive results summary that ranks all discoveries by habitability and scientific interest. We'll create a top discoveries list with detailed descriptions of the most promising Earth 2.0 candidates. This final summary will help you identify the best targets for follow-up observation or further study.
+
+ {report['n_total']} stars moving to Module 6: Results Summary
+Your discoveries are ready for the final report! 
 """
         return summary.strip()
     
@@ -407,7 +416,7 @@ def score_habitability(stellar_data: pd.DataFrame, transit_data: pd.DataFrame = 
     Parameters
     ----------
     stellar_data : pd.DataFrame
-        DataFrame with stellar parameters
+       - DataFrame with additional validation data
     transit_data : pd.DataFrame, optional
         DataFrame with transit detection results
         
