@@ -904,7 +904,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.markdown("---")
             st.markdown("#### 🛡️ Gaia DR3 Survival Test Results")
             
-            if survivors == inputs and inputs > 0:
+            if awaiting_data > 0:
+                st.info(f"ℹ️ **{awaiting_data} of {inputs} stars await Gaia DR3 data retrieval** ({awaiting_data/inputs:.1%})")
+                st.caption(f"These stars will be processed in Module 2 to retrieve stellar parameters and determine K Dwarf status")
+            elif survivors == inputs and inputs > 0:
                 st.success(f"✅ **All {inputs} coordinates survived the Gaia DR3 Survival Test**")
                 st.caption("These stars passed all quality filters and are considered **K Dwarf candidates**")
             elif survivors > 0:
@@ -2616,6 +2619,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 st.markdown("---")
 st.markdown(
     """
+    <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
+        ExoQ: Community Quest for Earth 2.0 © 2026
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
     <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
         ExoQ: Community Quest for Earth 2.0 © 2026
     </div>
