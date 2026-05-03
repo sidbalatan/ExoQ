@@ -2244,25 +2244,26 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             if st.session_state.pipeline_step == 4:
                 st.markdown("##### 📈 Module 4 of 8 - TESS Light Curves")
                 st.markdown(
-                    "**Detect transit signals in TESS light curves using BLS periodogram.**  \n"
-                    "Use the Box Least Squares (BLS) algorithm to search for periodic dips in star brightness - "
-                    "the tell-tale sign of an orbiting exoplanet. Score candidates by signal-to-noise ratio "
-                    "and false alarm probability to filter out false positives."
+                    "**Download TESS light curves for target stars from MAST API.**  \n"
+                    "Retrieve photometric data from NASA's TESS mission to measure star brightness over time. "
+                    "Light curves are essential for detecting transiting exoplanets - when a planet passes in front of its star, "
+                    "we see a characteristic dip in brightness."
                 )
-                with st.expander("READ MORE: The Transit Detection Process . . ."):
+                with st.expander("READ MORE: The TESS Light Curve Process . . ."):
                     st.markdown(
-                        "Module 4 uses the BLS (Box Least Squares) periodogram algorithm to detect transit signals in TESS light curves. BLS is a powerful mathematical tool that searches for periodic dips in brightness.\n\n"
-                        "- **BLS Algorithm**: Searches for periodic box-shaped signals in light curve data\n"
-                        "- **Signal-to-Noise Ratio (S/N)**: Measures how strong the transit signal is compared to noise\n"
-                        "- **False Alarm Probability (FAP)**: Statistical measure of how likely the signal is a false positive\n"
-                        "- **Period Range**: Typically 0.5-30 days for Earth-sized planets in habitable zones\n\n"
-                        "After detection, Module 4 filters candidates by S/N > 6 and FAP < 0.01 to ensure high-confidence detections. "
-                        "Only stars with confirmed transit candidates move to Module 5 for habitability scoring."
+                        "Module 4 downloads TESS light curves from NASA's MAST API for your target stars.\n\n"
+                        "- **MAST API**: NASA's Mikulski Archive for Space Telescopes hosts TESS data\n"
+                        "- **2-minute Cadence**: High-quality light curves for bright targets\n"
+                        "- **Full-Frame Images (FFI)**: Lower cadence but covers all stars\n"
+                        "- **Light Curve Quality**: Filters for good data quality flags\n"
+                        "- **Sector Coverage**: TESS observes in 27-day sectors covering different sky regions\n\n"
+                        "After downloading, Module 4 stores light curves for use in Module 5 for transit detection. "
+                        "Only stars with high-quality light curves proceed to the next step."
                     )
 
                 st.caption(
-                    "Module 4 uses the TESS light curves from Module 3. Only stars with TESS data will be analyzed. "
-                    "Candidates are filtered by signal-to-noise ratio and false alarm probability."
+                    "Module 4 downloads TESS light curves for stars identified in Module 3. "
+                    "Only stars with available TESS data will proceed to transit detection in Module 5."
                 )
 
                 # Check if data is available from Module 3
@@ -2640,146 +2641,259 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             if st.session_state.pipeline_step == 5:
                 st.markdown("##### 🎯 Module 5 of 8 - Transit Detection")
                 st.markdown(
-                    "**Score habitability of stars and exoplanet candidates.**  \n"
-                    "Calculate the Earth Similarity Index (ESI) for exoplanets and evaluate stellar habitability "
-                    "based on temperature, surface gravity, metallicity, and activity. Identify the most promising "
-                    "Earth 2.0 candidates for further study."
+                    "**Detect transit signals in TESS light curves using BLS periodogram.**  \n"
+                    "Use the Box Least Squares (BLS) algorithm to search for periodic dips in star brightness - "
+                    "the tell-tale sign of an orbiting exoplanet. Score candidates by signal-to-noise ratio "
+                    "and false alarm probability to filter out false positives."
                 )
-                with st.expander("READ MORE: The Habitability Scoring Process . . ."):
+                with st.expander("READ MORE: The Transit Detection Process . . ."):
                     st.markdown(
-                        "Module 5 evaluates the habitability potential of stars and exoplanet candidates using multiple criteria.\n\n"
-                        "- **Stellar Habitability**: Scores stars based on temperature (3900-4800K optimal), surface gravity (>4.5 dex for main sequence), and RUWE (<1.2 for low variability)\n"
-                        "- **Exoplanet Habitability**: Scores planets based on radius (0.8-1.5 Earth radii), orbital period (habitable zone), and signal-to-noise ratio\n"
-                        "- **Earth Similarity Index (ESI)**: A metric comparing exoplanets to Earth based on radius, temperature, and other properties (1.0 = Earth-like)\n"
-                        "- **Habitable Zone**: The region around a star where liquid water could exist on a planet's surface\n\n"
-                        "After scoring, Module 5 identifies the most habitable stars and exoplanets. Only high-scoring candidates "
-                        "move to Module 6 for the final results summary."
+                        "Module 5 uses the BLS (Box Least Squares) periodogram algorithm to detect transit signals in TESS light curves. BLS is a powerful mathematical tool that searches for periodic dips in brightness.\n\n"
+                        "- **BLS Algorithm**: Searches for periodic box-shaped signals in light curve data\n"
+                        "- **Signal-to-Noise Ratio (S/N)**: Measures how strong the transit signal is compared to noise\n"
+                        "- **False Alarm Probability (FAP)**: Statistical measure of how likely the signal is a false positive\n"
+                        "- **Period Range**: Typically 0.5-30 days for Earth-sized planets in habitable zones\n\n"
+                        "After detection, Module 5 filters candidates by S/N > 6 and FAP < 0.01 to ensure high-confidence detections. "
+                        "Only stars with confirmed transit candidates move to Module 6 for habitability scoring."
                     )
 
                 st.caption(
-                    "Module 5 uses transit detection data from Module 4 and stellar parameters from Module 2. "
-                    "Candidates are scored for habitability potential using the Earth Similarity Index."
+                    "Module 5 performs transit detection on TESS light curves from Module 4. "
+                    "Candidates are filtered by signal-to-noise ratio and false alarm probability."
                 )
 
                 # Check if data is available from Module 4
                 if st.session_state.pipeline_data is None:
                     st.warning("⚠️ No data available from Module 4. Please complete Module 4 first.")
                 else:
-                    st.info(f"📊 Ready to score {len(st.session_state.pipeline_data)} stars for habitability")
+                    st.info(f"📊 Ready to detect transits in {len(st.session_state.pipeline_data)} light curves")
 
                     # Run Module 5 button
                     if not st.session_state.get('module5_complete', False):
                         st.markdown("---")
-                        if st.button("🌍 Run Module 5 — Habitability Scoring", type="primary", key="run_module5"):
-                            with st.spinner("🌍 Scoring habitability and calculating Earth Similarity Index..."):
-                                # Initialize Module 5 (Habitability Scoring)
-                                module5 = HabitabilityScoringModule()
+                        if st.button("🎯 Run Module 5 — Transit Detection", type="primary", key="run_module5"):
+                            with st.spinner("🎯 Detecting transits using BLS periodogram..."):
+                                # Initialize Module 5 (Transit Detection)
+                                module5 = TransitDetectionModule()
                                 
-                                # Run habitability scoring
+                                # Run transit detection
                                 try:
-                                    # Use real scoring (set use_mock=True for testing)
-                                    habitability_data, scoring_report = module5.score_habitability(
+                                    # Use real detection (set use_mock=True for testing)
+                                    transit_data, detection_report = module5.detect_transits(
                                         st.session_state.pipeline_data
                                     )
                                     
                                     # Store results in session state
-                                    st.session_state.pipeline_data = habitability_data
-                                    st.session_state.scoring_report = scoring_report
+                                    st.session_state.pipeline_data = transit_data
+                                    st.session_state.transit_report = detection_report
                                     st.session_state.module5_complete = True
                                     
-                                    st.success(f"✅ Scored {len(habitability_data)} stars for habitability")
-                                    st.info(f"Highly habitable stars: {scoring_report['n_highly_habitable']}")
-                                    st.info(f"Habitable exoplanets: {scoring_report['n_habitable_exo']}")
+                                    st.success(f"✅ Detected {len(transit_data)} transit candidates")
+                                    st.info(f"High-confidence detections: {detection_report['n_high_confidence']}")
                                     st.rerun()
                                     
                                 except Exception as exc:
-                                    st.error(f"❌ Error during habitability scoring: {exc}")
-                                    st.info("Using mock data for demonstration")
+                                    st.error(f"❌ Error during transit detection: {exc}")
+                                    st.info("Please try again or check the logs.")
 
-                    # Display Module 5 results if complete
-                    if st.session_state.get('module5_complete', False):
-                        habitability_data = st.session_state.pipeline_data
-                        scoring_report = st.session_state.scoring_report
+                # Display Module 5 results if complete
+                if st.session_state.get('module5_complete', False):
+                    transit_data = st.session_state.pipeline_data
+                    detection_report = st.session_state.transit_report
+                    
+                    # Display transit detection statistics
+                    st.markdown("### 📊 Transit Detection Statistics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Light Curves", detection_report['n_total'])
+                    with col2:
+                        st.metric("Candidates Detected", detection_report['n_detected'])
+                    with col3:
+                        st.metric("High-Confidence", detection_report['n_high_confidence'])
+                    with col4:
+                        st.metric("Mean S/N", f"{detection_report['mean_snr']:.2f}")
+                    
+                    # Display results tables
+                    st.markdown("---")
+                    st.markdown("### 🌟 Transit Candidates")
+                    if len(transit_data) > 0:
+                        cols_to_show = ['source_id', 'ra', 'dec', 'transit_period', 'transit_depth', 'snr']
+                        st.dataframe(
+                            transit_data[cols_to_show].head(10),
+                            use_container_width=True
+                        )
+                        if len(transit_data) > 10:
+                            st.info(f"Showing 10 of {len(transit_data)} transit candidates")
+                    else:
+                        st.info("No transit candidates found")
+                    
+                    # Display success summary
+                    st.markdown("---")
+                    st.markdown("### 🎉 Transit Detection Complete")
+                    st.markdown(module5.get_success_summary())
+                    
+                    # Download and continue buttons
+                    st.markdown("---")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        csv_data = transit_data.to_csv(index=False)
+                        st.download_button(
+                            label="💾 Download Transit Detection Results (CSV)",
+                            data=csv_data,
+                            file_name=f"module5_transit_detection_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv"
+                        )
+                    with col2:
+                        if st.button("🚀 Continue to Module 6", type="secondary"):
+                            st.session_state.pipeline_step = 6
+                            st.rerun()
+                    
+                    # Reset button
+                    st.markdown("---")
+                    if st.button("🔄 Reset Module 5", type="secondary"):
+                        st.session_state.module5_complete = False
+                        st.session_state.transit_report = None
+                        st.rerun()
+
+# Module 6: Habitability Scoring
+if st.session_state.pipeline_started and st.session_state.pipeline_step >= 6:
+    with st.expander("🌍 Module 6 of 8 - Habitability Scoring", expanded=True):
+        if st.session_state.pipeline_step == 6:
+            st.markdown("##### 🌍 Module 6 of 8 - Habitability Scoring")
+            st.markdown(
+                "**Score habitability of stars and exoplanet candidates.**  \n"
+                "Calculate the Earth Similarity Index (ESI) for exoplanets and evaluate stellar habitability "
+                "based on temperature, surface gravity, metallicity, and activity. Identify the most promising "
+                "Earth 2.0 candidates for further study."
+            )
+            with st.expander("READ MORE: The Habitability Scoring Process . . ."):
+                st.markdown(
+                    "Module 6 evaluates the habitability potential of stars and exoplanet candidates using multiple criteria.\n\n"
+                    "- **Stellar Habitability**: Scores stars based on temperature (3900-4800K optimal), surface gravity (>4.5 dex for main sequence), and RUWE (<1.2 for low variability)\n"
+                    "- **Exoplanet Habitability**: Scores planets based on radius (0.8-1.5 Earth radii), orbital period (habitable zone), and signal-to-noise ratio\n"
+                    "- **Earth Similarity Index (ESI)**: A metric comparing exoplanets to Earth based on radius, temperature, and other properties (1.0 = Earth-like)\n"
+                    "- **Habitable Zone**: The region around a star where liquid water could exist on a planet's surface\n\n"
+                    "After scoring, Module 6 identifies the most habitable stars and exoplanets. Only high-scoring candidates "
+                    "move to Module 7 for the final results summary."
+                )
+
+            st.caption(
+                "Module 6 uses transit detection data from Module 5 and stellar parameters from Module 2. "
+                "Candidates are scored for habitability potential using the Earth Similarity Index."
+            )
+
+            # Check if data is available from Module 5
+            if st.session_state.pipeline_data is None:
+                st.warning("⚠️ No data available from Module 5. Please complete Module 5 first.")
+            else:
+                st.info(f"📊 Ready to score {len(st.session_state.pipeline_data)} stars for habitability")
+
+                # Run Module 6 button
+                if not st.session_state.get('module6_complete', False):
+                    st.markdown("---")
+                    if st.button("🌍 Run Module 6 — Habitability Scoring", type="primary", key="run_module6"):
+                        with st.spinner("🌍 Scoring habitability and calculating Earth Similarity Index..."):
+                            # Initialize Module 6 (Habitability Scoring)
+                            module6 = HabitabilityScoringModule()
+                            
+                            # Run habitability scoring
+                            try:
+                                habitability_data, scoring_report = module6.score_habitability(
+                                    st.session_state.pipeline_data
+                                )
+                                
+                                # Store results in session state
+                                st.session_state.pipeline_data = habitability_data
+                                st.session_state.scoring_report = scoring_report
+                                st.session_state.module6_complete = True
+                                
+                                st.success(f"✅ Scored {len(habitability_data)} stars for habitability")
+                                st.info(f"Highly habitable stars: {scoring_report['n_highly_habitable']}")
+                                st.info(f"Habitable exoplanets: {scoring_report['n_habitable_exo']}")
+                                st.rerun()
+                                
+                            except Exception as exc:
+                                st.error(f"❌ Error during habitability scoring: {exc}")
+                                st.info("Using mock data for demonstration")
+
+                # Display Module 6 results if complete
+                if st.session_state.get('module6_complete', False):
+                    habitability_data = st.session_state.pipeline_data
+                    scoring_report = st.session_state.scoring_report
+                    
+                    # Display habitability statistics
+                    st.markdown("### 📊 Habitability Statistics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Stars", scoring_report['n_total'])
+                    with col2:
+                        st.metric("Highly Habitable", scoring_report['n_highly_habitable'])
+                    with col3:
+                        st.metric("Habitable Exoplanets", scoring_report['n_habitable_exo'])
+                    with col4:
+                        st.metric("Max ESI", f"{scoring_report['max_esi']:.2f}")
+                    
+                    # Display results tables
+                    st.markdown("---")
+                    st.markdown("### 🌟 Highly Habitable Stars")
+                    highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
+                    if len(highly_habitable) > 0:
+                        cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
+                        if 'exo_hab_score' in highly_habitable.columns:
+                            cols_to_show.append('exo_hab_score')
+                        if 'esi' in highly_habitable.columns:
+                            cols_to_show.append('esi')
+                        st.dataframe(
+                            highly_habitable[cols_to_show].head(10),
+                            use_container_width=True
+                        )
+                        if len(highly_habitable) > 10:
+                            st.info(f"Showing 10 of {len(highly_habitable)} highly habitable stars")
+                    else:
+                        st.info("No highly habitable stars found")
+                    
+                    st.markdown("---")
+                    st.markdown("### 🪐 Habitable Exoplanet Candidates")
+                    if 'transit_passed_threshold' in habitability_data.columns:
+                        # Check if exo_hab_score column exists
+                        if 'exo_hab_score' in habitability_data.columns:
+                            habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
+                        else:
+                            habitable_exo = habitability_data[habitability_data['transit_passed_threshold'] == True]
                         
-                        # Display habitability statistics
-                        st.markdown("### 📊 Habitability Statistics")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Total Stars", scoring_report['n_total'])
-                        with col2:
-                            st.metric("Highly Habitable", scoring_report['n_highly_habitable'])
-                        with col3:
-                            st.metric("Habitable Exoplanets", scoring_report['n_habitable_exo'])
-                        with col4:
-                            st.metric("Max ESI", f"{scoring_report['max_esi']:.2f}")
-                        
-                        # Display results tables
-                        st.markdown("---")
-                        st.markdown("### 🌟 Highly Habitable Stars")
-                        highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
-                        if len(highly_habitable) > 0:
-                            # Build column list based on available columns
+                        if len(habitable_exo) > 0:
                             cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
-                            if 'exo_hab_score' in highly_habitable.columns:
+                            if 'exo_hab_score' in habitable_exo.columns:
                                 cols_to_show.append('exo_hab_score')
-                            if 'esi' in highly_habitable.columns:
+                            if 'esi' in habitable_exo.columns:
                                 cols_to_show.append('esi')
                             st.dataframe(
-                                highly_habitable[cols_to_show].head(10),
+                                habitable_exo[cols_to_show].head(10),
                                 use_container_width=True
                             )
-                            if len(highly_habitable) > 10:
-                                st.info(f"Showing 10 of {len(highly_habitable)} highly habitable stars")
+                            if len(habitable_exo) > 10:
+                                st.info(f"Showing 10 of {len(habitable_exo)} habitable exoplanet candidates")
                         else:
-                            st.info("No highly habitable stars found")
-                        
-                        st.markdown("---")
-                        st.markdown("### 🪐 Habitable Exoplanet Candidates")
-                        if 'transit_passed_threshold' in habitability_data.columns:
-                            # Check if exo_hab_score column exists
-                            if 'exo_hab_score' in habitability_data.columns:
-                                habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
-                            else:
-                                habitable_exo = habitability_data[habitability_data['transit_passed_threshold'] == True]
-                            
-                            if len(habitable_exo) > 0:
-                                # Build column list based on available columns
-                                cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
-                                if 'exo_hab_score' in habitable_exo.columns:
-                                    cols_to_show.append('exo_hab_score')
-                                if 'esi' in habitable_exo.columns:
-                                    cols_to_show.append('esi')
-                                if 'transit_period' in habitable_exo.columns:
-                                    cols_to_show.append('transit_period')
-                                st.dataframe(
-                                    habitable_exo[cols_to_show].head(10),
-                                    use_container_width=True
-                                )
-                                if len(habitable_exo) > 10:
-                                    st.info(f"Showing 10 of {len(habitable_exo)} habitable exoplanets")
-                            else:
-                                st.info("No habitable exoplanets found")
-                        else:
-                            st.info("No transit data available for exoplanet scoring")
+                            st.info("No habitable exoplanet candidates found")
                         
                         # Display success summary
                         st.markdown("---")
                         st.markdown("### 🎉 Habitability Scoring Complete")
-                        module5 = HabitabilityScoringModule()
-                        module5.data = habitability_data
-                        module5.scoring_report = scoring_report
-                        st.markdown(module5.get_success_summary())
+                        module6 = HabitabilityScoringModule()
+                        module6.data = habitability_data
+                        module6.scoring_report = scoring_report
+                        st.markdown(module6.get_success_summary())
                         
-                        # Generate and display Module 5 certificate
+                        # Generate and display Module 6 certificate
                         st.markdown("---")
-                        st.markdown("### 🏆 Module 5 Certificate")
+                        st.markdown("### 🏆 Module 6 Certificate")
                         
                         # Get sample source IDs for certificate
                         highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
                         sample_ids = highly_habitable['source_id'].head(5).tolist() if len(highly_habitable) > 0 else habitability_data['source_id'].head(5).tolist()
                         
                         # Generate certificate
-                        cert_png = render_module5_certificate(
+                        cert_png = render_module6_certificate(
                             display_name=current_display_name() or current_user() or "ExoQ Pioneer",
                             total_stars=scoring_report['n_total'],
                             highly_habitable=scoring_report['n_highly_habitable'],
