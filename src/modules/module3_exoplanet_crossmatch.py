@@ -26,7 +26,7 @@ class StartExoplanetQuestModule:
         self.data = None
         self.crossmatch_report = {}
         
-    def cross_match(self, stellar_data: pd.DataFrame, use_mock: bool = True, 
+    def cross_match(self, stellar_data: pd.DataFrame, use_mock: bool = False, 
                     radius_arcsec: float = 2.0) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
         Cross-match stars with NASA Exoplanet Archive.
@@ -36,8 +36,8 @@ class StartExoplanetQuestModule:
         stellar_data : pd.DataFrame
            - DataFrame with additional validation data and coordinates
         use_mock : bool
-            If True, use mock data for testing (default: True)
-            If False, query NASA Exoplanet Archive (requires internet)
+            If True, use mock data for testing
+            If False, query NASA Exoplanet Archive (default: False, requires internet)
         radius_arcsec : float
             Cross-match radius in arcseconds (default: 2.0)
             
@@ -314,7 +314,7 @@ You have both vetting candidates and discovery targets! 🎉
 
 
 # Convenience function for quick usage
-def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = True, 
+def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = False, 
                           radius_arcsec: float = 2.0) -> Tuple[pd.DataFrame, str]:
     """
     Convenience function to cross-match exoplanets.
@@ -324,7 +324,7 @@ def cross_match_exoplanets(stellar_data: pd.DataFrame, use_mock: bool = True,
     stellar_data : pd.DataFrame
        - DataFrame with additional validation data
     use_mock : bool
-        Use mock data for testing
+        Use mock data for testing (default: False)
     radius_arcsec : float
         Cross-match radius
         

@@ -508,9 +508,11 @@ if uploaded_file is not None:
             f"(adjust with the slider above)."
         )
 
-# Modules 2-8 default to mock data while they remain gated behind the
-# members-only Run Full Pipeline. No user-facing toggle is needed.
-use_mock = True
+# Modules 2-8 use live data from NASA APIs (MAST, Exoplanet Archive, Gaia DR3)
+# Data is retrieved in real-time from scientific databases
+use_mock = False
+
+st.info("🌐 **Live Data Mode**: Retrieving real-time data from NASA APIs (MAST, Exoplanet Archive, Gaia DR3)\n\n⚠️ **Note**: If data retrieval takes longer than expected, the APIs may be busy. Please try again in a few minutes.")
 
 st.markdown(
     "**🧬 The Gaia DR3 Survival Test.**  \n"
@@ -1632,7 +1634,11 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         # Display light curves for stars with TESS data
                         st.markdown("---")
                         st.markdown("### 📈 TESS Light Curves")
-                        tess_available = tess_data[tess_data['tess_available'] == True]
+                        # Check if tess_available column exists
+                        if 'tess_available' in tess_data.columns:
+                            tess_available = tess_data[tess_data['tess_available'] == True]
+                        else:
+                            tess_available = tess_data
                         
                         if len(tess_available) > 0:
                             st.info(f"Displaying light curves for {len(tess_available)} stars with TESS data. Select a star below to view its light curve.")
@@ -1679,7 +1685,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(0.5 * u.day, 100 * u.day)
+                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, method='snr')
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1754,7 +1760,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.caption("Analyze light curves one at a time to predict which stars have orbiting planets. Your predictions train the AI!")
                             
                             # Star selection
-                            tess_available = tess_data[tess_data['tess_available'] == True]
+                            if 'tess_available' in tess_data.columns:
+                                tess_available = tess_data[tess_data['tess_available'] == True]
+                            else:
+                                tess_available = tess_data
                             
                             if len(tess_available) == 0:
                                 st.info("No stars with TESS data available for gamification.")
@@ -1870,7 +1879,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(0.5 * u.day, 100 * u.day)
+                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, method='snr')
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -2083,7 +2092,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                         st.session_state.user_prediction = None
                                         
                                         # Auto-advance to next unanalyzed star
-                                        tess_available = tess_data[tess_data['tess_available'] == True]
+                                        if 'tess_available' in tess_data.columns:
+                                            tess_available = tess_data[tess_data['tess_available'] == True]
+                                        else:
+                                            tess_available = tess_data
                                         analyzed_set = set(st.session_state.analyzed_stars)
                                         next_star = None
                                         next_source_id = None
@@ -2123,7 +2135,12 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             
                             # Important notice about downloading TESS Results
                             st.warning("⚠️ **Important:** Download TESS Results to be used in Module 4 later. The transit detection module requires the light curve data from this step.")
-                            tess_available = tess_data[tess_data['tess_available'] == True]
+                            if 'tess_available' in tess_data.columns:
+                                tess_available = tess_data[tess_data['tess_available'] == True]
+                                tess_unavailable = tess_data[tess_data['tess_available'] == False]
+                            else:
+                                tess_available = tess_data
+                                tess_unavailable = pd.DataFrame()
                             if len(tess_available) > 0:
                                 st.dataframe(
                                     tess_available[['source_id', 'ra', 'dec', 'sectors', 'data_points', 'cadence_minutes', 'lc_quality']],
@@ -2566,7 +2583,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 mime="text/csv"
                             )
                         with col3:
-                            if st.button("🚀 Continue to Module 5", type="secondary"):
+                            if st.button("🚀 Continue to Module 6", type="secondary"):
                                 st.session_state.pipeline_step = 6
                                 st.rerun()
                         

@@ -26,7 +26,7 @@ class ValidationFilterModule:
         self.data = None
         self.quality_report = {}
         
-    def get_parameters(self, coordinates: pd.DataFrame, use_mock: bool = True) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    def get_parameters(self, coordinates: pd.DataFrame, use_mock: bool = False) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
         Retrieve additional validation data from Gaia DR3.
         
@@ -35,8 +35,8 @@ class ValidationFilterModule:
         coordinates : pd.DataFrame
             DataFrame with coordinates (ra, dec) or source_id
         use_mock : bool
-            If True, use mock data for testing (default: True)
-            If False, query Gaia DR3 (requires internet)
+            If True, use mock data for testing
+            If False, query Gaia DR3 (default: False, requires internet)
             
         Returns
         -------
@@ -309,7 +309,7 @@ Your K Dwarf sample is scientifically robust! 🎯
 
 
 # Convenience function for quick usage
-def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = True) -> Tuple[pd.DataFrame, str]:
+def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = False) -> Tuple[pd.DataFrame, str]:
     """
     Convenience function to get additional validation data.
     
@@ -318,7 +318,7 @@ def get_stellar_parameters(coordinates: pd.DataFrame, use_mock: bool = True) -> 
     coordinates : pd.DataFrame
         DataFrame with coordinates
     use_mock : bool
-        Use mock data for testing
+        Use mock data for testing (default: False)
         
     Returns
     -------

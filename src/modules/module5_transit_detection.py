@@ -26,7 +26,7 @@ class TransitDetectionModule:
         self.data = None
         self.detection_report = {}
         
-    def detect_transits(self, lightcurve_data: pd.DataFrame, use_mock: bool = True,
+    def detect_transits(self, lightcurve_data: pd.DataFrame, use_mock: bool = False,
                        period_range: tuple = (0.5, 30), min_snr: float = 6.0,
                        max_fap: float = 0.01) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
@@ -37,8 +37,8 @@ class TransitDetectionModule:
         lightcurve_data : pd.DataFrame
             DataFrame with light curve metadata
         use_mock : bool
-            If True, use mock data for testing (default: True)
-            If False, run actual BLS detection
+            If True, use mock data for testing
+            If False, run actual BLS detection (default: False)
         period_range : tuple
             Period range to search in days (default: 0.5-30)
         min_snr : float
@@ -381,7 +381,7 @@ Exciting potential discoveries! 🌟
 
 
 # Convenience function for quick usage
-def detect_transits(lightcurve_data: pd.DataFrame, use_mock: bool = True,
+def detect_transits(lightcurve_data: pd.DataFrame, use_mock: bool = False,
                      period_range: tuple = (0.5, 30), min_snr: float = 6.0,
                      max_fap: float = 0.01) -> Tuple[pd.DataFrame, str]:
     """
@@ -392,7 +392,7 @@ def detect_transits(lightcurve_data: pd.DataFrame, use_mock: bool = True,
     lightcurve_data : pd.DataFrame
         DataFrame with light curve metadata
     use_mock : bool
-        Use mock data for testing
+        Use mock data for testing (default: False)
     period_range : tuple
         Period range to search
     min_snr : float

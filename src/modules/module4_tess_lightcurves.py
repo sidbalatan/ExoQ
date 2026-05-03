@@ -26,7 +26,7 @@ class TESSLightCurveModule:
         self.data = None
         self.download_report = {}
         
-    def retrieve_lightcurves(self, stellar_data: pd.DataFrame, use_mock: bool = True, 
+    def retrieve_lightcurves(self, stellar_data: pd.DataFrame, use_mock: bool = False, 
                              sectors: list = None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
         Retrieve TESS light curves for input stars.
@@ -36,8 +36,8 @@ class TESSLightCurveModule:
         stellar_data : pd.DataFrame
            - DataFrame with additional validation data and coordinates
         use_mock : bool
-            If True, use mock data for testing (default: True)
-            If False, query MAST API (requires internet)
+            If True, use mock data for testing
+            If False, query MAST API (default: False, requires internet)
         sectors : list
             Specific sectors to query (default: all available)
             
@@ -304,7 +304,7 @@ You're ready to hunt for transits! 🔭
 
 
 # Convenience function for quick usage
-def retrieve_tess_lightcurves(stellar_data: pd.DataFrame, use_mock: bool = True, 
+def retrieve_tess_lightcurves(stellar_data: pd.DataFrame, use_mock: bool = False, 
                               sectors: list = None) -> Tuple[pd.DataFrame, str]:
     """
     Convenience function to retrieve TESS light curves.
@@ -314,7 +314,7 @@ def retrieve_tess_lightcurves(stellar_data: pd.DataFrame, use_mock: bool = True,
     stellar_data : pd.DataFrame
        - DataFrame with additional validation data
     use_mock : bool
-        Use mock data for testing
+        Use mock data for testing (default: False)
     sectors : list
         Specific sectors to query
         

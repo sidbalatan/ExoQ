@@ -200,9 +200,11 @@ if uploaded_file is not None:
             f"(adjust with the slider above)."
         )
 
-# Modules 2-8 default to mock data while they remain gated behind the
-# members-only Run Full Pipeline. No user-facing toggle is needed.
-use_mock = True
+# Modules 2-8 use live data from NASA APIs (MAST, Exoplanet Archive, Gaia DR3)
+# Data is retrieved in real-time from scientific databases
+use_mock = False
+
+st.info("🌐 **Live Data Mode**: Retrieving real-time data from NASA APIs (MAST, Exoplanet Archive, Gaia DR3)\n\n⚠️ **Note**: If data retrieval takes longer than expected, the APIs may be busy. Please try again in a few minutes.")
 
 st.markdown(
     "**🧬 The Gaia DR3 Survival Test.**  \n"
