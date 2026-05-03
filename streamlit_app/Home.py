@@ -1442,7 +1442,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     st.markdown("### 🪐 Known Exoplanet Hosts")
                     # Check if has_exoplanet column exists, if not add it based on exo_pl_name
                     if 'has_exoplanet' not in crossmatched_data.columns:
-                        crossmatched_data['has_exoplanet'] = crossmatched_data['exo_pl_name'].notna()
+                        if 'exo_pl_name' in crossmatched_data.columns:
+                            crossmatched_data['has_exoplanet'] = crossmatched_data['exo_pl_name'].notna()
+                        else:
+                            crossmatched_data['has_exoplanet'] = False
                     exoplanet_hosts = crossmatched_data[crossmatched_data['has_exoplanet'] == True]
                     if len(exoplanet_hosts) > 0:
                         st.dataframe(
