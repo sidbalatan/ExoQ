@@ -125,7 +125,7 @@ with st.expander("☰ Navigation Menu", expanded=False):
     st.markdown("---")
     
     # Resume Game button - only show if there are unanalyzed stars
-    if st.session_state.get("analyzed_stars"):
+    if st.session_state.get("analyzed_stars") and st.session_state.get("stars"):
         unanalyzed_count = len(st.session_state.stars) - len(st.session_state.analyzed_stars)
         if unanalyzed_count > 0:
             if st.button(f"🎮 Resume Game ({unanalyzed_count} stars left)", key="nav_resume_game"):
