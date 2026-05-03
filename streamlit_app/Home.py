@@ -312,7 +312,8 @@ with menu_col:
             "🔒 Module 4.5 of 8 - ExoMiner++ Vetting  \n"
             "🔒 Module 5 of 8 - Habitability Scoring  \n"
             "🔒 Module 6 of 8 - Results Summary  \n"
-            "🔒 Module 7 of 8 - Data Export"
+            "🔒 Module 7 of 8 - Discovery  \n"
+            "🔒 Module 8 of 8 - Data Export"
         )
         st.markdown("---")
         # Check if user can run full pipeline
@@ -1688,7 +1689,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, method='snr')
+                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, duration=0.1 * u.day, method='slow')
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1882,7 +1883,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, method='snr')
+                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, duration=0.1 * u.day, method='slow')
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
