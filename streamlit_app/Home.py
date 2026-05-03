@@ -138,6 +138,72 @@ with st.expander("☰ Navigation Menu", expanded=False):
                         st.rerun()
                         break
 
+# ExoQuest Leaderboard
+st.markdown("---")
+st.markdown("### 🏆 ExoQuest Leaderboard")
+
+if current_user():
+    store = get_store()
+    try:
+        all_users_progress = store.get_all_users_progress()
+        
+        if all_users_progress:
+            # Sort users by score (descending)
+            sorted_users = sorted(
+                all_users_progress.items(),
+                key=lambda x: x[1].get("score", 0),
+                reverse=True
+            )
+            
+            # Find current user's rank
+            current_user_id = current_user()
+            current_user_rank = None
+            current_user_score = 0
+            for idx, (user_id, progress) in enumerate(sorted_users, 1):
+                if user_id == current_user_id:
+                    current_user_rank = idx
+                    current_user_score = progress.get("score", 0)
+                    break
+            
+            # Display current user's stats
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Your Score", current_user_score)
+            with col2:
+                st.metric("Your Rank", f"#{current_user_rank}" if current_user_rank else "N/A")
+            with col3:
+                st.metric("Total Players", len(sorted_users))
+            
+            # Display leaderboard
+            st.markdown("#### Top Players")
+            leaderboard_data = []
+            for rank, (user_id, progress) in enumerate(sorted_users[:10], 1):
+                leaderboard_data.append({
+                    "Rank": rank,
+                    "Player": progress.get("display_name", user_id),
+                    "Score": progress.get("score", 0),
+                    "Stars Analyzed": len(progress.get("analyzed_stars", [])),
+                    "Badges": len(progress.get("badges", []))
+                })
+            
+            df_leaderboard = pd.DataFrame(leaderboard_data)
+            st.dataframe(
+                df_leaderboard,
+                column_config={
+                    "Rank": st.column_config.NumberColumn("Rank", format="%d"),
+                    "Player": st.column_config.TextColumn("Player"),
+                    "Score": st.column_config.NumberColumn("Score"),
+                    "Stars Analyzed": st.column_config.NumberColumn("Stars Analyzed"),
+                    "Badges": st.column_config.NumberColumn("Badges")
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+        else:
+            st.info("No player data available yet. Be the first to play!")
+    except Exception as e:
+        st.warning(f"Could not load leaderboard: {e}")
+
 # Style primary buttons (Run Module 1) in dark green.
 st.markdown(
     """

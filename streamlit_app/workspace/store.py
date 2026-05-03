@@ -455,6 +455,37 @@ class LocalFileStore:
         except Exception as e:
             raise Exception(f"Failed to load user progress: {e}")
 
+    def get_all_users_progress(self) -> Dict[str, Dict[str, Any]]:
+        """Get all users' progress data from the data/users directory."""
+        all_progress = {}
+        try:
+            # Iterate through all user directories
+            for user_dir in self.root.iterdir():
+                if user_dir.is_dir():
+                    progress_file = user_dir / "progress.json"
+                    if progress_file.exists():
+                        try:
+                            progress_data = json.loads(progress_file.read_text(encoding="utf-8"))
+                            # Get display name from profile if available
+                            profile_file = user_dir / "profile.json"
+                            display_name = user_dir.name  # Default to user_id
+                            if profile_file.exists():
+                                try:
+                                    profile = json.loads(profile_file.read_text(encoding="utf-8"))
+                                    display_name = profile.get("display_name", user_dir.name)
+                                except Exception:
+                                    pass
+                            all_progress[user_dir.name] = {
+                                "display_name": display_name,
+                                **progress_data
+                            }
+                        except Exception:
+                            # Skip users with corrupted progress files
+                            continue
+        except Exception as e:
+            raise Exception(f"Failed to load all users progress: {e}")
+        return all_progress
+
     def update_profile(self, user_id: str, display_name: Optional[str] = None, age: Optional[int] = None, gender: Optional[str] = None, country: Optional[str] = None) -> None:
         """Update user profile fields."""
         uid = normalize_user_id(user_id)
