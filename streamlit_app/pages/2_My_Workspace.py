@@ -23,6 +23,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from workspace import current_user, sign_in_widget, get_store, current_email, current_display_name  # noqa: E402
+from workspace.navigation import render_navigation
 
 st.set_page_config(page_title="My Workspace · ExoQ", page_icon="👤", layout="wide", initial_sidebar_state="collapsed")
 
@@ -56,6 +57,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Navigation menu
+render_navigation()
 
 # --- Header + sign-in popover -----------------------------------------------
 st.markdown("# 👤 My Workspace")

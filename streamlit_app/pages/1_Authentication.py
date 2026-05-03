@@ -9,6 +9,7 @@ import streamlit as st
 
 from workspace import sign_in_widget, current_user, current_email
 from workspace.identity import sign_out
+from workspace.navigation import render_navigation
 
 st.set_page_config(
     page_title="ExoQ - Sign in or Create an Account",
@@ -47,6 +48,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Navigation menu
+render_navigation()
 
 st.markdown("# 🔑 Sign in to ExoQ")
 st.caption(
