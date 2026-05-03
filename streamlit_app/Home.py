@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import io
+import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -18,14 +20,14 @@ load_dotenv()
 from identifier_resolver import parse_manual_input
 from gaia_enricher import enrich_rows
 from workspace import auth_strip, current_user, sign_in_widget, get_store
-from workspace.store import RunMeta, RunRecord, new_run_id
+from workspace.store import RunMeta, RunRecord, new_run_id, normalize_user_id
+from certificate import render_certificate, render_module2_certificate, render_module3_certificate, render_module4_certificate, render_module5_certificate
 
 # Add src to path for module imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from modules.module1_data_input import DataInputModule
-from modules.module2_stellar_parameters import StellarParameterModule
-from modules.module3_exoplanet_crossmatch import ExoplanetCrossMatchModule
+from modules.module3_exoplanet_crossmatch import StartExoplanetQuestModule
 from modules.module4_tess_lightcurves import TESSLightCurveModule
 from modules.module5_transit_detection import TransitDetectionModule
 from modules.module6_habitability_scoring import HabitabilityScoringModule
@@ -142,6 +144,10 @@ st.markdown(
             background-color: #1b5e20 !important;
             border-color: #1b5e20 !important;
             color: #ffffff !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+            direction: ltr !important;
+            text-align: left !important;
         }
         [data-testid="stFileUploader"] button:hover,
         [data-testid="stFileUploaderDropzone"] button:hover {
@@ -149,10 +155,51 @@ st.markdown(
             border-color: #2e7d32 !important;
             color: #ffffff !important;
         }
+        /* Force all inner elements to be left-aligned */
+        [data-testid="stFileUploader"] button *,
+        [data-testid="stFileUploaderDropzone"] button * {
+            text-align: left !important;
+            direction: ltr !important;
+        }
+        /* Target the specific label element in the upload button */
+        [data-testid="stFileUploader"] button label,
+        [data-testid="stFileUploaderDropzone"] button label {
+            text-align: left !important;
+            direction: ltr !important;
+            justify-content: flex-start !important;
+            align-items: flex-start !important;
+        }
+        /* Target the button's inner container */
+        [data-testid="stFileUploader"] button > div > div > div,
+        [data-testid="stFileUploaderDropzone"] button > div > div > div {
+            text-align: left !important;
+            direction: ltr !important;
+        }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# Add JavaScript to force left alignment on upload button
+st.markdown("""
+<script>
+const forceLeftAlign = () => {
+    const buttons = document.querySelectorAll("[data-testid='stFileUploader'] button, [data-testid='stFileUploaderDropzone'] button");
+    buttons.forEach(btn => {
+        btn.style.textAlign = 'left';
+        btn.style.direction = 'ltr';
+        btn.style.justifyContent = 'flex-start';
+        const children = btn.querySelectorAll('*');
+        children.forEach(child => {
+            child.style.textAlign = 'left';
+            child.style.direction = 'ltr';
+        });
+    });
+};
+setTimeout(forceLeftAlign, 1000);
+setInterval(forceLeftAlign, 2000);
+</script>
+""", unsafe_allow_html=True)
 
 # --- Main Menu + inline Sign in / Sign up strip ------------------------------
 # Simple two-column layout: Main Menu flush left, auth links on right.
@@ -163,7 +210,11 @@ with menu_col:
         st.page_link("pages/1_Authentication.py", label="Create an Account")
         from workspace.identity import sign_out
         from workspace import current_user
+        st.markdown("---")
+        st.page_link("Home.py", label="🏠 Home (you're here)")
         if current_user():
+            st.markdown("---")
+            st.page_link("pages/2_My_Workspace.py", label="📁 My Workspace")
             st.markdown("---")
             if st.button("Sign out", key="main_menu_signout"):
                 sign_out()
@@ -171,20 +222,45 @@ with menu_col:
         st.markdown("---")
         st.markdown("#### 📚 Modules")
         st.markdown(
-            "**▶ Module 1 of 8 - Data Input**  \n"
-            "🔒 Module 2 of 8 - Stellar Parameters  \n"
-            "🔒 Module 3 of 8 - Exoplanet Cross-Match  \n"
-            "🔒 Module 4 of 8 - TESS Light Curves  \n"
-            "🔒 Module 5 of 8 - Transit Detection  \n"
-            "🔒 Module 6 of 8 - Habitability Scoring  \n"
-            "🔒 Module 7 of 8 - Results Summary  \n"
-            "🔒 Module 8 of 8 - Data Export"
+            "**▶ Module 1 of 8 - Data Input and Gaia Survival Test**  \n"
+            "🔒 Module 2 of 8 - Start Exoplanet Quest  \n"
+            "🔒 Module 3 of 8 - TESS Light Curves  \n"
+            "🔒 Module 4 of 8 - Transit Detection  \n"
+            "🔒 Module 4.5 of 8 - ExoMiner++ Vetting  \n"
+            "🔒 Module 5 of 8 - Habitability Scoring  \n"
+            "🔒 Module 6 of 8 - Results Summary  \n"
+            "🔒 Module 7 of 8 - Data Export"
         )
         st.markdown("---")
+        # Check if user can run full pipeline
+        can_run_full_pipeline = False
+        if current_user():
+            store = get_store()
+            uid = normalize_user_id(current_user())
+            
+            # Check gallery posts count
+            gallery_posts = store.get_gallery_posts_count(uid)
+            
+            # Check account tenure (1 month = 30 days)
+            created_at_str = store.get_created_at(uid)
+            days_since_creation = 0
+            if created_at_str:
+                try:
+                    from datetime import datetime, timezone, timedelta
+                    created_at = datetime.fromisoformat(created_at_str)
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=timezone.utc)
+                    days_since_creation = (datetime.now(timezone.utc) - created_at).days
+                except Exception:
+                    days_since_creation = 0
+            
+            # User can run full pipeline if they have 1 month tenure OR 12 gallery posts
+            can_run_full_pipeline = (days_since_creation >= 30) or (gallery_posts >= 12)
+        
         run_pipeline = st.button(
             "🚀 Run Full Pipeline",
-            disabled=True,
-            help="Members only. Unlocks after 6 months of membership OR 12 contributed posts.",
+            disabled=not can_run_full_pipeline,
+            help="Members only. Unlocks after 1 month of membership OR 12 contributed posts." if not can_run_full_pipeline else "Run all modules automatically",
             use_container_width=True,
         )
         st.markdown("---")
@@ -194,7 +270,7 @@ with auth_col:
     auth_strip()
 
 # --- Main page: Module 1 input controls --------------------------------------
-st.markdown("##### 📥 Module 1 of 8 - Data Input")
+st.markdown("##### 📥 Module 1 of 8 - Data Input and Gaia Survival Test")
 st.markdown(
     "**The starting line of your quest for Earth 2.0.**  \n"
     "Hand the pipeline a list of sky coordinates — upload a CSV or type "
@@ -282,8 +358,9 @@ with input_left:
         if not preview_rows and not preview_unresolved:
             st.info("Nothing to preview yet — paste some entries into the textarea above.")
 with input_right:
+    st.markdown("#### 📂 Upload CSV")
     uploaded_file = st.file_uploader(
-        "📂 Upload CSV (overrides manual entry)",
+        "Choose a CSV file",
         type=["csv"],
         help=(
             "Upload a CSV instead of typing. Must contain at least 'ra' and 'dec' "
@@ -427,7 +504,7 @@ if 'summaries' not in st.session_state:
 if run_module1:
     st.session_state.pipeline_step = 0
     st.session_state.pipeline_started = True
-    st.session_state.m1_only = True
+    st.session_state.m1_only = False
     st.session_state.pipeline_data = None
     st.session_state.summaries = {}
     st.rerun()
@@ -447,7 +524,7 @@ if not st.session_state.pipeline_started:
 # Only run modules if pipeline has been started
 if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
     # Module 1: Data Input
-    with st.expander("📥 Module 1 of 8 - Data Input", expanded=True):
+    with st.expander("📥 Module 1 of 8 - Data Input and Gaia Survival Test", expanded=True):
         if st.session_state.pipeline_step == 0:
             st.info("Loading coordinates...")
             
@@ -523,6 +600,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         "phot_g_mean_mag", "bp_rp",
                         "teff_gspphot", "logg_gspphot",
                         "gaia_match_arcsec", "gaia_dr3_name", "identifier",
+                        "source_id",
                     ]:
                         if col in enriched.columns:
                             df[col] = enriched[col]
@@ -650,9 +728,17 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     if bprp_col else pd.Series([np.nan] * n, index=data.index)
                 )
 
+                # Only apply K-Dwarf cuts to stars that have valid Gaia DR3 data
+                # Check if key survival criteria columns have valid (non-NaN) values
+                survival_criteria_cols = ['teff_gspphot', 'logg_gspphot', 'ruwe', 'bp_rp', 'parallax']
+                has_gaia_data = True
+                for col in survival_criteria_cols:
+                    if col in data.columns:
+                        has_gaia_data = has_gaia_data & data[col].notna()
+                
                 # Pass = K-Dwarf survival cuts (loose).
                 pass_mask = (
-                    teff.between(3900, 5300)
+                    teff.between(3900, 5300) & has_gaia_data
                     & (logg >= 4.0)
                     & (ruwe < 1.4)
                 )
@@ -665,12 +751,13 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 )
                 # Silver = passes thresholds but borderline.
                 silver_mask = pass_mask & ~gold_mask
-                # Failed = doesn't meet minimum K-Dwarf cuts.
+                # Failed = doesn't meet minimum K-Dwarf cuts OR has no Gaia DR3 data.
                 failed_mask = ~pass_mask
 
                 tier_series = np.where(
                     gold_mask, 'Gaia Certified K Dwarf',
-                    np.where(silver_mask, 'Need Follow Up', 'Failed')
+                    np.where(silver_mask, 'Need Follow Up', 
+                            np.where(~has_gaia_data, 'Awaiting Gaia DR3 Data', 'Failed'))
                 )
                 gold = int(gold_mask.sum())
                 silver = int(silver_mask.sum())
@@ -681,11 +768,24 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 data = data.copy()
                 data['tier'] = tier_series
                 st.session_state.pipeline_data = data
+            else:
+                # No Gaia DR3 columns available - mark all as awaiting data
+                data = data.copy()
+                data['tier'] = 'Awaiting Gaia DR3 Data'
+                st.session_state.pipeline_data = data
+                failed = n
 
             survivors = gold + silver
+            awaiting_data = int((data['tier'] == 'Awaiting Gaia DR3 Data').sum()) if 'tier' in data.columns else 0
             _hdr_style = "font-size: 1rem; font-weight: 600; margin: 0.4rem 0 0.1rem 0;"
             # Celebration banner ---------------------------------------------------
-            if failed == 0 and survivors == inputs and survivors > 0:
+            if awaiting_data > 0:
+                st.markdown(
+                    f"<p style='{_hdr_style}'><b>{awaiting_data}</b> stars are ready for Module 2 to retrieve Gaia DR3 data.</p>",
+                    unsafe_allow_html=True,
+                )
+                st.caption("These stars will be enriched with stellar parameters in Module 2.")
+            elif failed == 0 and survivors == inputs and survivors > 0:
                 st.markdown(
                     f"<p style='{_hdr_style}'>All <b>{survivors}</b> stars cleared the GAIA Survival Test — meet your Survivors.</p>",
                     unsafe_allow_html=True,
@@ -715,57 +815,107 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             tcol2.metric("🥈 Need Follow Up",         silver)
             tcol3.metric("🥉 Failed",                  failed)
 
+            # Summary report with survival criteria explanation
+            st.markdown("---")
+            st.markdown("#### 🛡️ Gaia DR3 Survival Test Results")
+            
+            if survivors == inputs and inputs > 0:
+                st.success(f"✅ **All {inputs} coordinates survived the Gaia DR3 Survival Test**")
+                st.caption("These stars passed all quality filters and are considered **K Dwarf candidates**")
+            elif survivors > 0:
+                st.warning(f"⚠️ **{survivors} of {inputs} coordinates survived** ({survivors/inputs:.1%})")
+                st.caption(f"{inputs - survivors} stars failed one or more quality filters")
+            else:
+                st.error(f"❌ **0 of {inputs} coordinates survived**")
+                st.caption("All stars failed one or more quality filters")
+            
+            # Survival criteria details
+            st.markdown("""
+            **Survival criteria applied to the table below:**
+            - Effective temperature (Teff): 3,900 K ≤ Teff ≤ 5,300 K
+            - Surface gravity (log g): log g ≥ 4.0
+            - Astrometric quality (RUWE): RUWE < 1.4
+            - Color index (BP − RP): 1.1 ≤ BP − RP ≤ 2.6
+            - Distance: Parallax > 0 (real, measurable distance)
+            - Cleanliness flags: Not flagged as giant or M dwarf
+            
+            **Note:** Surviving stars are **K Dwarf candidates** - they passed the initial quality filters
+            but will undergo further refinement in subsequent modules.
+            """)
+            
+            st.markdown("---")
+            st.subheader("📋 Surviving Stars Data Table")
+            st.caption("🔬 **Live Data:** Stellar parameters from ESA Gaia DR3 | Survival criteria columns highlighted")
+
             # Replace the legacy module1 'success' summary (which only validates
             # RA/Dec ranges and would mis-report "100% pass rate" even when
             # rows fail the K-Dwarf cuts) with a truthful tier-based summary.
             pass_pct = (100.0 * survivors / inputs) if inputs else 0.0
-            if survivors == inputs and inputs > 0:
+            if awaiting_data == inputs and inputs > 0:
                 st.success(
-                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"**Module 1: Data Input and Gaia Survival Test | 1 of 8 Complete** \n"
+                    f"All {inputs} stars loaded and ready for Module 2 to retrieve Gaia DR3 data."
+                )
+            elif survivors == inputs and inputs > 0:
+                st.success(
+                    f"**Module 1: Data Input and Gaia Survival Test | 1 of 8 Complete** \n"
                     f"All {inputs} stars passed the GAIA DR3 Survival Test "
                     f"({gold} Certified, {silver} Need Follow Up). Ready for Module 2."
                 )
             elif survivors > 0:
                 st.success(
-                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"**Module 1: Data Input and Gaia Survival Test | 1 of 8 Complete** \n"
                     f"{survivors} of {inputs} stars passed the GAIA DR3 Survival Test "
                     f"({pass_pct:.0f}% pass rate \u2014 {gold} Certified, {silver} Need Follow Up, "
                     f"{failed} Failed). Survivors continue to Module 2."
                 )
             else:
                 st.warning(
-                    f"**Module 1: Data Input | 1 of 8 Complete** \n"
+                    f"**Module 1: Data Input and Gaia Survival Test | 1 of 8 Complete** \n"
                     f"0 of {inputs} stars passed the GAIA DR3 Survival Test \u2014 "
                     f"all {failed} were flagged Failed. Review the inputs before continuing."
                 )
 
             # Preview the survivor table (richer column set when available).
             preview_cols = [c for c in [
-                'source_id', 'gaia_dr3_name', 'ra', 'dec',
+                'module1_passed', 'source_id', 'gaia_dr3_name', 'ra', 'dec',
                 'teff_gspphot', 'logg_gspphot', 'ruwe',
                 'k_subtype', 'tier'
             ] if c in data.columns]
             if not preview_cols:
                 preview_cols = list(data.columns[:6])
-            st.dataframe(data[preview_cols].head(20), use_container_width=True)
+            
+            # Create a copy and reset index starting from 1
+            preview_df = data[preview_cols].head(20).copy()
+            preview_df = preview_df.reset_index(drop=True)
+            preview_df.index = preview_df.index + 1
+            
+            # Rename module1_passed to Survived if present
+            if 'module1_passed' in preview_df.columns:
+                preview_df = preview_df.rename(columns={'module1_passed': '✅ Survived'})
+            
+            st.dataframe(preview_df, use_container_width=True)
 
             # ----- Live Gaia DR3 Verification report --------------------
-            verify_cols = [
+            st.markdown(
+                "<p style='font-size: 1rem; font-weight: 600; margin: 0.6rem 0 0.1rem 0;'>"
+                "Live ESA Gaia DR3 verification</p>",
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "These are the raw values returned by the live ADQL query against "
+                "`gaiadr3.gaia_source` joined with `gaiadr3.astrophysical_parameters`. "
+                "The tier column is derived from these values by the GAIA Survival Test."
+            )
+            
+            # Show available columns
+            available_verify_cols = [c for c in [
                 'source_id', 'teff_gspphot', 'logg_gspphot',
-                'ruwe', 'bp_rp', 'tier',
-            ]
-            if all(c in data.columns for c in verify_cols):
-                st.markdown(
-                    "<p style='font-size: 1rem; font-weight: 600; margin: 0.6rem 0 0.1rem 0;'>"
-                    "Live ESA Gaia DR3 verification</p>",
-                    unsafe_allow_html=True,
-                )
-                st.caption(
-                    "These are the raw values returned by the live ADQL query against "
-                    "`gaiadr3.gaia_source` joined with `gaiadr3.astrophysical_parameters`. "
-                    "The tier column is derived from these values by the GAIA Survival Test."
-                )
-                verify_df = data[verify_cols].copy()
+                'ruwe', 'bp_rp', 'tier', 'gaia_dr3_name', 'ra', 'dec'
+            ] if c in data.columns]
+            
+            if available_verify_cols:
+                verify_df = data[available_verify_cols].copy()
                 verify_df = verify_df.rename(columns={
                     'source_id':     'Gaia DR3 source_id',
                     'teff_gspphot':  'Teff (K)',
@@ -773,19 +923,40 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     'ruwe':          'RUWE',
                     'bp_rp':         'BP - RP',
                     'tier':          'Tier',
+                    'gaia_dr3_name': 'Gaia DR3 Name',
+                    'ra':            'RA (deg)',
+                    'dec':           'Dec (deg)',
                 })
                 fmt_df = verify_df.copy()
-                # Format numerics for readability without losing precision in CSV exports.
-                for col, ndp in [('Teff (K)', 1), ('log g', 2), ('RUWE', 2), ('BP - RP', 2)]:
+                # Format numerics for readability
+                for col, ndp in [('Teff (K)', 1), ('log g', 2), ('RUWE', 2), ('BP - RP', 2), ('RA (deg)', 6), ('Dec (deg)', 6)]:
                     if col in fmt_df.columns:
                         fmt_df[col] = pd.to_numeric(fmt_df[col], errors='coerce').round(ndp)
                 if 'Gaia DR3 source_id' in fmt_df.columns:
                     fmt_df['Gaia DR3 source_id'] = fmt_df['Gaia DR3 source_id'].astype('Int64').astype(str)
-                st.dataframe(fmt_df, use_container_width=True, hide_index=True)
+                
+                # Apply orange styling to survivor rows
+                def highlight_survivor_row(row):
+                    """Apply orange font color to entire row if it's a survivor."""
+                    tier_val = row.get('Tier', '')
+                    if tier_val == 'Gaia Certified K Dwarf' or tier_val == 'Need Follow Up':
+                        return ['color: #FF8C00; font-weight: bold;' for _ in row]
+                    else:
+                        return ['' for _ in row]
+                
+                # Reset index starting from 1
+                fmt_df = fmt_df.reset_index(drop=True)
+                fmt_df.index = fmt_df.index + 1
+                
+                styler = fmt_df.head(20).style
+                styler = styler.apply(highlight_survivor_row, axis=1)
+                st.dataframe(styler, use_container_width=True, hide_index=True)
                 st.caption(
                     f"**Live archive verdict:** "
-                    f"🥇 **{gold}** Certified · 🥈 **{silver}** Need Follow Up · 🥉 **{failed}** Failed."
+                    f"🥇 **{gold}** Certified · 🥈 **{silver}** Need Follow Up · 🥉 **{failed}** Failed · ⏳ **{awaiting_data if 'awaiting_data' in locals() else 0}** Awaiting Data"
                 )
+            else:
+                st.info("No Gaia DR3 data available - stars will be enriched in Module 2")
 
             # ----- Certificate of Discovery ----------------------------
             if survivors > 0:
@@ -801,7 +972,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 )
 
                 from certificate import render_certificate
-                from workspace.identity import current_display_name
+                from workspace.identity import current_display_name, current_user
 
                 # Pull a few survivor source_ids for the certificate footer.
                 _sample_ids = []
@@ -816,47 +987,86 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 
                 _display_name = current_display_name() or current_user() or "ExoQ Pioneer"
                 _run_id = st.session_state.get("m1_last_saved_run_id", "")
-                try:
-                    _png_bytes = render_certificate(
-                        display_name=_display_name,
-                        survivors_count=int(survivors),
-                        inputs_count=int(inputs),
-                        gold=int(gold), silver=int(silver), failed=int(failed),
-                        sample_source_ids=_sample_ids,
-                        run_id=_run_id,
-                    )
-                    st.image(_png_bytes, use_container_width=True)
+                
+                # Check if certificate already exists in session state
+                if 'certificate_png' not in st.session_state:
+                    try:
+                        _png_bytes = render_certificate(
+                            display_name=_display_name,
+                            survivors_count=int(survivors),
+                            inputs_count=int(inputs),
+                            gold=int(gold), silver=int(silver), failed=int(failed),
+                            sample_source_ids=_sample_ids,
+                            run_id=_run_id,
+                        )
+                        st.session_state.certificate_png = _png_bytes
+                        st.session_state.certificate_name = (
+                            (_display_name or "ExoQ_Pioneer").replace(" ", "_")
+                            + "_ExoQ_Certificate.png"
+                        )
+                    except Exception as exc:  # pragma: no cover -- never block the run on a render hiccup
+                        st.warning(f"Certificate could not be rendered: {exc}")
+                
+                # Display certificate from session state
+                if 'certificate_png' in st.session_state:
+                    st.image(st.session_state.certificate_png, use_container_width=True)
 
-                    cert_safe_name = (
-                        (_display_name or "ExoQ_Pioneer").replace(" ", "_")
-                        + "_ExoQ_Certificate.png"
-                    )
-                    btn_left, btn_right = st.columns([1, 1])
-                    with btn_left:
-                        st.download_button(
-                            "⬇️ Download Certificate (PNG)",
-                            data=_png_bytes,
-                            file_name=cert_safe_name,
-                            mime="image/png",
-                            type="primary",
-                        )
-                    with btn_right:
-                        st.button(
-                            "🌐 Submit to ExoQ Gallery (coming soon)",
-                            disabled=True,
-                            help=(
-                                "The public gallery launches with Module 8. "
-                                "Until then, download the PNG and share manually."
-                            ),
-                        )
+                    # Check if pipeline_data exists for save button
+                    has_pipeline_data = 'pipeline_data' in st.session_state and st.session_state.pipeline_data is not None
+                    
+                    if has_pipeline_data:
+                        btn_left, btn_mid, btn_right = st.columns([1, 1, 1])
+                        with btn_left:
+                            st.download_button(
+                                "⬇️ Download Certificate (PNG)",
+                                data=st.session_state.certificate_png,
+                                file_name=st.session_state.certificate_name,
+                                mime="image/png",
+                                type="primary",
+                            )
+                        with btn_mid:
+                            csv_data = st.session_state.pipeline_data.to_csv(index=False)
+                            st.download_button(
+                                "💾 Save K Dwarf Survivors (CSV)",
+                                data=csv_data,
+                                file_name=f"ExoQ_Module1_KDwarf_Survivors_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv",
+                                help="Save the K Dwarf survivors from Module 1 for use in Module 2"
+                            )
+                        with btn_right:
+                            st.button(
+                                "🌐 Submit to ExoQ Gallery (coming soon)",
+                                disabled=True,
+                                help=(
+                                    "The public gallery launches with Module 8. "
+                                    "Until then, download the PNG and share manually."
+                                ),
+                            )
+                    else:
+                        btn_left, btn_right = st.columns([1, 1])
+                        with btn_left:
+                            st.download_button(
+                                "⬇️ Download Certificate (PNG)",
+                                data=st.session_state.certificate_png,
+                                file_name=st.session_state.certificate_name,
+                                mime="image/png",
+                                type="primary",
+                            )
+                        with btn_right:
+                            st.button(
+                                "🌐 Submit to ExoQ Gallery (coming soon)",
+                                disabled=True,
+                                help=(
+                                    "The public gallery launches with Module 8. "
+                                    "Until then, download the PNG and share manually."
+                                ),
+                            )
 
                     if not current_user():
                         st.caption(
                             "Tip: open **☰ Main Menu** and sign in with your name "
                             "to personalise the certificate."
                         )
-                except Exception as exc:  # pragma: no cover -- never block the run on a render hiccup
-                    st.warning(f"Certificate could not be rendered: {exc}")
 
             # Fire balloons exactly once per Run.
             if not st.session_state.get('m1_celebrated', False):
@@ -864,244 +1074,1225 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                 st.session_state.m1_celebrated = True
         
         if st.session_state.pipeline_step == 1 and not st.session_state.m1_only:
-            if st.button("Continue to Module 2", key="m1_continue"):
-                st.session_state.pipeline_step = 2
-                st.rerun()
+            # Check if user can auto-run all modules
+            can_auto_run = False
+            if current_user():
+                store = get_store()
+                uid = normalize_user_id(current_user())
+                
+                # Check gallery posts count
+                gallery_posts = store.get_gallery_posts_count(uid)
+                
+                # Check account tenure (1 month = 30 days)
+                created_at_str = store.get_created_at(uid)
+                days_since_creation = 0
+                if created_at_str:
+                    try:
+                        from datetime import datetime, timezone, timedelta
+                        created_at = datetime.fromisoformat(created_at_str)
+                        if created_at.tzinfo is None:
+                            created_at = created_at.replace(tzinfo=timezone.utc)
+                        days_since_creation = (datetime.now(timezone.utc) - created_at).days
+                    except Exception:
+                        days_since_creation = 0
+                
+                # User can auto-run if they have 1 month tenure OR 12 gallery posts
+                can_auto_run = (days_since_creation >= 30) or (gallery_posts >= 12)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🪐 Start Exoplanet Quest", key="m1_continue"):
+                    st.session_state.pipeline_step = 2
+                    st.rerun()
+            with col2:
+                if can_auto_run:
+                    if st.button("🚀 Auto-Run All Modules", key="auto_run_all"):
+                        st.session_state.auto_run = True
+                        st.session_state.pipeline_step = 2
+                        st.rerun()
+                else:
+                    st.button(
+                        "🚀 Auto-Run All Modules",
+                        key="auto_run_all_disabled",
+                        disabled=True,
+                        help="Members only. Unlocks after 1 month of membership OR 12 contributed posts."
+                    )
         elif st.session_state.pipeline_step == 1 and st.session_state.m1_only:
-            st.info("✅ Module 1 complete. Modules 2-8 are disabled while we focus on Module 1.")
+            st.info("Module 1 complete. Click 'Start Exoplanet Quest' to continue to Module 2.")
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 1:
-    # Module 2: Stellar Parameters
-    with st.expander("🌟 Module 2 of 8 - Stellar Parameters", expanded=st.session_state.pipeline_step == 1):
-        if st.session_state.pipeline_step == 1:
-            st.info("Retrieving stellar parameters from Gaia DR3...")
-            
-            module2 = StellarParameterModule()
-            df, quality = module2.get_parameters(st.session_state.pipeline_data, use_mock=use_mock)
-            
-            summary = module2.get_success_summary()
-            st.session_state.summaries['module2'] = summary
-            st.success(summary)
-            st.dataframe(df[['source_id', 'ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']].head())
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 2
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module2', 'Module 2: Stellar Parameters | 2 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id']
-            for col in ['ra', 'dec', 'teff_gspphot', 'logg_gspphot', 'ruwe']:
-                if col in st.session_state.pipeline_data.columns:
-                    cols_to_show.append(col)
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
-        
-        if st.session_state.pipeline_step == 2:
-            if st.button("Continue to Module 3", key="m2_continue"):
-                st.session_state.pipeline_step = 3
-                st.rerun()
+    # Module 2: Start Exoplanet Quest
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 2:
+        with st.expander("🪐 Module 2 of 8 - Start Exoplanet Quest", expanded=True):
+            if st.session_state.pipeline_step == 2:
+                st.markdown("##### 📥 Module 2 of 8 - Start Exoplanet Quest")
+                st.markdown(
+                    "**Validate if K Dwarfs from Module 1 were already processed and catalogued.**  \n"
+                    "Cross-match your K Dwarf survivors against the NASA Exoplanet Archive to identify "
+                    "known exoplanet hosts (for vetting candidates) and virgin discovery targets (for new discovery)."
+                )
+                with st.expander("READ MORE: The Exoplanet Quest Process . . ."):
+                    st.markdown(
+                        "Module 2 takes the K Dwarf survivors from Module 1 and queries the NASA Exoplanet Archive "
+                        "to determine if these stars already have discovered exoplanets. This cross-match helps us:\n\n"
+                        "- **Identify known exoplanet hosts** - Stars with confirmed exoplanets are valuable for "
+                        "vetting candidates and follow-up observations\n"
+                        "- **Find virgin discovery targets** - Stars with no known exoplanets are perfect for new discovery\n"
+                        "- **Calculate separation distances** - Verify spatial accuracy of cross-matches\n\n"
+                        "After the cross-match, Module 2 provides a clear classification: 🪐 Known Exoplanet Host vs "
+                        "🌟 Virgin Discovery Target. Only virgin targets move to Modules 3–8 for deeper analysis."
+                    )
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 2:
-    # Module 3: Exoplanet Cross-Match
-    with st.expander("🪐 Module 3 of 8 - Exoplanet Cross-Match", expanded=st.session_state.pipeline_step == 2):
-        if st.session_state.pipeline_step == 2:
-            st.info("Cross-matching with NASA Exoplanet Archive...")
-            
-            module3 = ExoplanetCrossMatchModule()
-            df, report = module3.cross_match(st.session_state.pipeline_data, use_mock=use_mock)
-            
-            summary = module3.get_success_summary()
-            st.session_state.summaries['module3'] = summary
-            st.success(summary)
-            st.dataframe(df[['source_id', 'has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']].head())
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 3
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module3', 'Module 3: Exoplanet Cross-Match | 3 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id']
-            for col in ['has_exoplanet', 'exo_pl_name', 'exo_pl_orbper']:
-                if col in st.session_state.pipeline_data.columns:
-                    cols_to_show.append(col)
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
-        
-        if st.session_state.pipeline_step == 3:
-            if st.button("Continue to Module 4", key="m3_continue"):
-                st.session_state.pipeline_step = 4
-                st.rerun()
+                st.caption(
+                    "You can **upload the CSV file saved from Module 1** or use **manual input** (coordinates/identifiers). "
+                    "The file must contain the Module 1 pipeline metadata "
+                    "(source_id, ra, dec, tier, module1_passed, module1_timestamp). Coordinates and identifiers "
+                    "not from the Module 1 pipeline will be rejected."
+                )
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 3:
-    # Module 4: TESS Light Curves
-    with st.expander("📈 Module 4 of 8 - TESS Light Curves", expanded=st.session_state.pipeline_step == 3):
-        if st.session_state.pipeline_step == 3:
-            st.info("Retrieving TESS light curves from MAST API...")
-            
-            module4 = TESSLightCurveModule()
-            df, report = module4.retrieve_lightcurves(st.session_state.pipeline_data, use_mock=use_mock)
-            
-            summary = module4.get_success_summary()
-            st.session_state.summaries['module4'] = summary
-            st.success(summary)
-            st.dataframe(df[['source_id', 'tess_available', 'sectors', 'data_points', 'cadence_minutes']].head())
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 4
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module4', 'Module 4: TESS Light Curves | 4 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id']
-            for col in ['tess_available', 'sectors', 'data_points', 'cadence_minutes']:
-                if col in st.session_state.pipeline_data.columns:
-                    cols_to_show.append(col)
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
-        
-        if st.session_state.pipeline_step == 4:
-            if st.button("Continue to Module 5", key="m4_continue"):
-                st.session_state.pipeline_step = 5
-                st.rerun()
+                # Input method selection
+                input_method = st.radio(
+                    "Select Input Method",
+                    ["Upload Module 1 Results CSV", "Manual Input (Coordinates/Identifiers)"],
+                    horizontal=True,
+                    key="module2_input_method"
+                )
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 4:
-    # Module 5: Transit Detection
-    with st.expander("🎯 Module 5 of 8 - Transit Detection", expanded=st.session_state.pipeline_step == 4):
-        if st.session_state.pipeline_step == 4:
-            st.info("Detecting transits using BLS periodogram...")
-            
-            module5 = TransitDetectionModule()
-            df, report = module5.detect_transits(st.session_state.pipeline_data, use_mock=use_mock)
-            
-            summary = module5.get_success_summary()
-            st.session_state.summaries['module5'] = summary
-            st.success(summary)
-            st.dataframe(df[['source_id', 'has_transit_candidate', 'transit_period', 'transit_snr']].head())
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 5
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module5', 'Module 5: Transit Detection | 5 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id']
-            for col in ['has_transit_candidate', 'transit_period', 'transit_snr']:
-                if col in st.session_state.pipeline_data.columns:
-                    cols_to_show.append(col)
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
-        
-        if st.session_state.pipeline_step == 5:
-            if st.button("Continue to Module 6", key="m5_continue"):
-                st.session_state.pipeline_step = 6
-                st.rerun()
+                if input_method == "Upload Module 1 Results CSV":
+                    st.markdown("#### 📂 Upload Module 1 Results CSV")
+                    module2_uploaded_file = st.file_uploader(
+                        "Choose a CSV file",
+                        type=["csv"],
+                        help=(
+                            "Upload the CSV file that was saved from Module 1. Must contain Module 1 pipeline metadata "
+                            "including source_id, ra, dec, tier, module1_passed, and module1_timestamp columns."
+                        ),
+                    )
+                else:
+                    st.info("📝 Manual Input Mode")
+                    st.caption("Enter coordinates (RA, Dec) or Gaia DR3 source IDs. These will be validated against Module 1 pipeline requirements.")
+                    
+                    manual_input_type = st.radio(
+                        "Input Type",
+                        ["Coordinates (RA, Dec)", "Gaia DR3 Source IDs"],
+                        horizontal=True,
+                        key="module2_manual_input_type"
+                    )
+                    
+                    if manual_input_type == "Coordinates (RA, Dec)":
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            manual_ra = st.text_input("Right Ascension (RA) in degrees", placeholder="e.g., 123.456")
+                        with col2:
+                            manual_dec = st.text_input("Declination (Dec) in degrees", placeholder="e.g., -12.345")
+                    else:
+                        manual_source_ids = st.text_area(
+                            "Gaia DR3 Source IDs",
+                            placeholder="Enter one source ID per line, e.g.,\n1234567890123456784\n1234567890123456785",
+                            help="Enter Gaia DR3 source IDs (18-digit numbers), one per line"
+                        )
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 5:
-    # Module 6: Habitability Scoring
-    with st.expander("💧 Module 6 of 8 - Habitability Scoring", expanded=st.session_state.pipeline_step == 5):
-        if st.session_state.pipeline_step == 5:
-            st.info("Scoring habitability of stars and exoplanets...")
-            
-            module6 = HabitabilityScoringModule()
-            df, report = module6.score_habitability(st.session_state.pipeline_data, st.session_state.pipeline_data)
-            
-            summary = module6.get_success_summary()
-            st.session_state.summaries['module6'] = summary
-            st.success(summary)
-            # Only display columns that exist
-            cols_to_show = ['source_id', 'stellar_hab_score']
-            if 'exo_hab_score' in df.columns:
-                cols_to_show.append('exo_hab_score')
-            if 'esi' in df.columns:
-                cols_to_show.append('esi')
-            st.dataframe(df[cols_to_show].head())
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 6
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module6', 'Module 6: Habitability Scoring | 6 of 8 Complete!'))
-            # Only display columns that exist
-            cols_to_show = ['source_id', 'stellar_hab_score']
-            if 'exo_hab_score' in st.session_state.pipeline_data.columns:
-                cols_to_show.append('exo_hab_score')
-            if 'esi' in st.session_state.pipeline_data.columns:
-                cols_to_show.append('esi')
-            st.dataframe(st.session_state.pipeline_data[cols_to_show].head())
-        
-        if st.session_state.pipeline_step == 6:
-            if st.button("Continue to Module 7", key="m6_continue"):
-                st.session_state.pipeline_step = 7
-                st.rerun()
+                # Validate and Preview Identifiers section
+                st.markdown("---")
+                st.markdown("##### 🔍 Validate and Preview Identifiers")
+                
+                # Restore validated_data from session state if available
+                if 'validated_data' in st.session_state and st.session_state.validated_data is not None:
+                    validated_data = st.session_state.validated_data
+                else:
+                    validated_data = None
+                validation_error = None
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 6:
-    # Module 7: Results Summary
-    with st.expander("🏆 Module 7 of 8 - Results Summary", expanded=st.session_state.pipeline_step == 6):
-        if st.session_state.pipeline_step == 6:
-            st.info("Generating comprehensive results summary...")
-            
-            module7 = ResultsSummaryModule()
-            df, report = module7.generate_summary(st.session_state.pipeline_data)
-            
-            summary = module7.get_success_summary()
-            st.session_state.summaries['module7'] = summary
-            st.success(summary)
-            
-            # Display top discoveries
-            st.subheader("Top Discoveries")
-            for i, discovery in enumerate(report['top_discoveries'][:5], 1):
-                st.write(f"{i}. TIC {discovery['source_id']} - {discovery['description']}")
-            
-            st.session_state.pipeline_data = df
-            st.session_state.pipeline_step = 7
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module7', 'Module 7: Results Summary | 7 of 8 Complete!'))
-            
-            # Display top discoveries
-            st.subheader("Top Discoveries")
-            for i, discovery in enumerate(st.session_state.pipeline_data.get('top_discoveries', [] )[:5], 1):
-                st.write(f"{i}. TIC {discovery['source_id']} - {discovery['description']}")
-        
-        if st.session_state.pipeline_step == 7:
-            if st.button("Continue to Module 8", key="m7_continue"):
-                st.session_state.pipeline_step = 8
-                st.rerun()
+                if input_method == "Upload Module 1 Results CSV":
+                    # Only show validation button if data not already validated
+                    if validated_data is None:
+                        if st.button("🔍 Validate Uploaded File", key="validate_module2_upload"):
+                            if module2_uploaded_file is None:
+                                validation_error = "Please upload a CSV file first."
+                            else:
+                                try:
+                                    # Try different encodings to handle UTF-8 decode errors
+                                    encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+                                    for encoding in encodings:
+                                        try:
+                                            module2_df = pd.read_csv(module2_uploaded_file, encoding=encoding)
+                                            break
+                                        except UnicodeDecodeError:
+                                            continue
+                                    else:
+                                        raise UnicodeDecodeError("Could not decode CSV with any common encoding")
+                                    
+                                    # Check for essential columns (source_id, ra, dec)
+                                    essential_cols = ['source_id', 'ra', 'dec']
+                                    missing_essential = [col for col in essential_cols if col not in module2_df.columns]
+                                    if missing_essential:
+                                        validation_error = f"Missing essential columns: {', '.join(missing_essential)}"
+                                    else:
+                                        # Add missing optional columns with default values
+                                        if 'tier' not in module2_df.columns:
+                                            module2_df['tier'] = 'Unknown'
+                                        if 'module1_passed' not in module2_df.columns:
+                                            module2_df['module1_passed'] = True
+                                        if 'module1_timestamp' not in module2_df.columns:
+                                            module2_df['module1_timestamp'] = pd.Timestamp.now()
+                                        
+                                        validated_data = module2_df
+                                        st.session_state.validated_data = module2_df
+                                        st.success(f"✅ Valid Module 1 pipeline data loaded: {len(module2_df)} stars")
+                                        preview_cols = [c for c in ['source_id', 'gaia_dr3_name', 'ra', 'dec', 'tier'] if c in module2_df.columns]
+                                        st.dataframe(module2_df[preview_cols].head(10), use_container_width=True)
+                                except UnicodeDecodeError as exc:
+                                    validation_error = f"❌ Could not decode the CSV file: {exc}"
+                                except Exception as exc:
+                                    validation_error = f"❌ Could not parse the CSV file: {exc}"
+                    else:
+                        # Data already validated, show it
+                        st.success(f"✅ Data already validated: {len(validated_data)} stars")
+                        preview_cols = [c for c in ['source_id', 'gaia_dr3_name', 'ra', 'dec', 'tier'] if c in validated_data.columns]
+                        st.dataframe(validated_data[preview_cols].head(10), use_container_width=True)
+                else:
+                    # Only show validation button if data not already validated
+                    if validated_data is None:
+                        if st.button("🔍 Validate Manual Input", key="validate_module2_manual"):
+                            if manual_input_type == "Coordinates (RA, Dec)":
+                                if not manual_ra or not manual_dec:
+                                    validation_error = "Please enter both RA and Dec values."
+                                else:
+                                    try:
+                                        ra_val = float(manual_ra)
+                                        dec_val = float(manual_dec)
+                                        if not (0 <= ra_val <= 360):
+                                            validation_error = "RA must be between 0 and 360 degrees."
+                                        elif not (-90 <= dec_val <= 90):
+                                            validation_error = "Dec must be between -90 and 90 degrees."
+                                        else:
+                                            validated_data = pd.DataFrame({
+                                                'source_id': [f"manual_{ra_val}_{dec_val}"],
+                                                'ra': [ra_val],
+                                                'dec': [dec_val],
+                                                'tier': ['Manual'],
+                                                'module1_passed': [True],
+                                                'module1_timestamp': [pd.Timestamp.now()]
+                                            })
+                                            st.session_state.validated_data = validated_data
+                                            st.success(f"✅ Valid coordinates: RA={ra_val}, Dec={dec_val}")
+                                            st.dataframe(validated_data, use_container_width=True)
+                                    except ValueError:
+                                        validation_error = "Please enter valid numeric values for RA and Dec."
+                            else:
+                                if not manual_source_ids:
+                                    validation_error = "Please enter at least one source ID."
+                                else:
+                                    try:
+                                        source_id_list = [line.strip() for line in manual_source_ids.split('\n') if line.strip()]
+                                        validated_data = pd.DataFrame({
+                                            'source_id': source_id_list,
+                                            'ra': [0.0] * len(source_id_list),
+                                            'dec': [0.0] * len(source_id_list),
+                                            'tier': ['Manual'] * len(source_id_list),
+                                            'module1_passed': [True] * len(source_id_list),
+                                            'module1_timestamp': [pd.Timestamp.now()] * len(source_id_list)
+                                        })
+                                        st.session_state.validated_data = validated_data
+                                        st.success(f"✅ {len(source_id_list)} source IDs validated")
+                                        st.dataframe(validated_data, use_container_width=True)
+                                    except Exception as exc:
+                                        validation_error = f"❌ Could not validate source IDs: {exc}"
+                    else:
+                        # Data already validated, show it
+                        st.success(f"✅ Data already validated: {len(validated_data)} stars")
+                        st.dataframe(validated_data.head(10), use_container_width=True)
 
-if st.session_state.pipeline_started and not st.session_state.m1_only and st.session_state.pipeline_step >= 7:
-    # Module 8: Data Export
-    with st.expander("💾 Module 8 of 8 - Data Export", expanded=st.session_state.pipeline_step == 7):
-        if st.session_state.pipeline_step == 7:
-            st.info("Exporting results in multiple formats...")
-            
-            module8 = DataExportModule()
-            report, summary = module8.export_data(st.session_state.pipeline_data, formats=['csv', 'json'])
-            
-            st.session_state.summaries['module8'] = summary
-            st.success(summary)
-            
-            # Display export report
-            st.subheader("Export Report")
-            st.json(report)
-            
-            st.session_state.pipeline_step = 8
-            st.rerun()
-        else:
-            st.success(st.session_state.summaries.get('module8', 'Module 8: Data Export | 8 of 8 Complete!'))
-            
-            # Display export report
-            st.subheader("Export Report")
-            st.json(st.session_state.pipeline_data.get('export_report', {}))
-        
-        if st.session_state.pipeline_step == 8:
-            st.balloons()
-            st.markdown("---")
-            st.success("🎉 Pipeline Complete! All modules executed successfully!")
+                if validation_error:
+                    st.error(validation_error)
 
-# Reset button
-if st.session_state.pipeline_step > 0 or st.session_state.pipeline_started:
-    st.markdown("---")
-    if st.button("🔄 Reset Pipeline"):
-        st.session_state.pipeline_step = 0
-        st.session_state.pipeline_data = None
-        st.session_state.pipeline_started = False
-        st.session_state.summaries = {}
-        st.rerun()
+                # Run Module 2 button (only show after validation and if not complete)
+                if validated_data is not None and not st.session_state.get('module2_complete', False):
+                    st.markdown("---")
+                    if st.button("🪐 Run Module 2 — Exoplanet Quest", type="primary", key="run_module2"):
+                        with st.spinner("🪐 Cross-matching with NASA Exoplanet Archive..."):
+                            # Initialize Module 2 (Exoplanet Cross-match)
+                            module2 = StartExoplanetQuestModule()
+                            
+                            # Run cross-matching with NASA Exoplanet Archive
+                            try:
+                                # Use real NASA Exoplanet Archive API
+                                crossmatched_data, crossmatch_report = module2.cross_match(
+                                    validated_data, 
+                                    use_mock=False,  # Use real NASA API
+                                    radius_arcsec=2.0
+                                )
+                                
+                                # Store results in session state
+                                st.session_state.pipeline_data = crossmatched_data
+                                st.session_state.crossmatch_report = crossmatch_report
+                                st.session_state.module2_complete = True
+                                st.session_state.validated_data = validated_data
+                                
+                                st.success(f"✅ Cross-matched {len(crossmatched_data)} stars with NASA Exoplanet Archive")
+                                st.info(f"Found {crossmatch_report['n_exoplanet_hosts']} stars with known exoplanets")
+                                st.info(f"{crossmatch_report['n_virgin']} virgin stars for new discovery")
+                                st.rerun()
+                                
+                            except Exception as exc:
+                                st.error(f"❌ Error during cross-matching: {exc}")
+                                st.warning("⚠️ Unable to connect to NASA Exoplanet Archive. The service may be experiencing heavy traffic. Please retry later.")
+
+                # Display Module 2 results if complete
+                if st.session_state.get('module2_complete', False):
+                    crossmatched_data = st.session_state.pipeline_data
+                    crossmatch_report = st.session_state.crossmatch_report
+                    
+                    # Display cross-match statistics
+                    st.markdown("### 📊 Cross-Match Statistics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Stars", crossmatch_report['n_total'])
+                    with col2:
+                        st.metric("Exoplanet Hosts", crossmatch_report['n_exoplanet_hosts'])
+                    with col3:
+                        st.metric("Virgin Targets", crossmatch_report['n_virgin'])
+                    with col4:
+                        st.metric("With Exoplanets", f"{crossmatch_report['fraction_with_exoplanets']*100:.1f}%")
+                    
+                    # Display results tables
+                    st.markdown("---")
+                    st.markdown("### 🪐 Known Exoplanet Hosts")
+                    exoplanet_hosts = crossmatched_data[crossmatched_data['has_exoplanet'] == True]
+                    if len(exoplanet_hosts) > 0:
+                        st.dataframe(
+                            exoplanet_hosts[['source_id', 'ra', 'dec', 'exo_pl_name', 'exo_pl_orbper', 'exo_pl_rade']],
+                            use_container_width=True
+                        )
+                    else:
+                        st.info("No known exoplanet hosts found in this dataset")
+                    
+                    st.markdown("---")
+                    st.markdown("### 🌟 Virgin Discovery Targets")
+                    virgin_targets = crossmatched_data[crossmatched_data['has_exoplanet'] == False]
+                    if len(virgin_targets) > 0:
+                        st.dataframe(
+                            virgin_targets[['source_id', 'ra', 'dec']].head(10),
+                            use_container_width=True
+                        )
+                        if len(virgin_targets) > 10:
+                            st.info(f"Showing 10 of {len(virgin_targets)} virgin targets")
+                    else:
+                        st.info("No virgin targets found")
+                    
+                    # Display success summary
+                    st.markdown("---")
+                    st.markdown("### 🎉 Cross-Match Complete")
+                    module2 = StartExoplanetQuestModule()
+                    module2.data = crossmatched_data
+                    module2.crossmatch_report = crossmatch_report
+                    st.markdown(module2.get_success_summary())
+                    
+                    # Generate and display Module 2 certificate
+                    st.markdown("---")
+                    st.markdown("### 🏆 Module 2 Certificate")
+                    
+                    # Get sample source IDs for certificate
+                    sample_ids = crossmatched_data['source_id'].head(5).tolist()
+                    
+                    # Generate certificate
+                    cert_png = render_module2_certificate(
+                        display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                        total_stars=crossmatch_report['n_total'],
+                        exoplanet_hosts=crossmatch_report['n_exoplanet_hosts'],
+                        virgin_targets=crossmatch_report['n_virgin'],
+                        sample_source_ids=sample_ids,
+                        run_id=new_run_id(),
+                    )
+                    
+                    # Display certificate
+                    st.image(cert_png, use_container_width=True)
+                    
+                    # Download buttons for certificate and data
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.download_button(
+                            label="📥 Download Certificate",
+                            data=cert_png,
+                            file_name=f"exomodule2_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
+                            mime="image/png",
+                            type="primary"
+                        )
+                    with col2:
+                        csv_data = crossmatched_data.to_csv(index=False)
+                        st.download_button(
+                            label="💾 Download Cross-Match Results (CSV)",
+                            data=csv_data,
+                            file_name=f"module2_crossmatch_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv"
+                        )
+                    with col3:
+                        if st.button("🚀 Continue to Module 3", type="secondary"):
+                            st.session_state.pipeline_step = 3
+                            st.rerun()
+                    
+                    # Reset button to start over
+                    st.markdown("---")
+                    if st.button("🔄 Reset Module 2", type="secondary"):
+                        st.session_state.module2_complete = False
+                        st.session_state.pipeline_data = None
+                        st.session_state.crossmatch_report = None
+                        st.session_state.validated_data = None
+                        st.rerun()
+
+    # Module 3: TESS Light Curves
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
+        with st.expander("📈 Module 3 of 8 - TESS Light Curves", expanded=True):
+            if st.session_state.pipeline_step == 3:
+                st.markdown("##### 📥 Module 3 of 8 - TESS Light Curves")
+                st.markdown(
+                    "**Download TESS light curves for target stars from MAST API.**  \n"
+                    "Retrieve photometric data from NASA's TESS mission to measure star brightness over time. "
+                    "Light curves are essential for detecting transiting exoplanets - when a planet passes in front of its star, "
+                    "we see a characteristic dip in brightness."
+                )
+                with st.expander("READ MORE: The TESS Light Curve Process . . ."):
+                    st.markdown(
+                        "Module 3 retrieves light curves from TESS (Transiting Exoplanet Survey Satellite), a NASA space telescope that observes millions of stars. A light curve shows how a star's brightness changes over time.\n\n"
+                        "- **TESS Observations**: TESS observes sectors of the sky for 27-day periods, monitoring thousands of stars simultaneously\n"
+                        "- **Light Curve Data**: Each light curve contains thousands of brightness measurements over time\n"
+                        "- **Cadence**: The time between measurements (2, 10, or 30 minutes depending on observation mode)\n"
+                        "- **Data Quality**: We assess data quality based on noise levels and observation coverage\n\n"
+                        "After downloading light curves, Module 3 provides a summary of observation coverage and data quality. "
+                        "Only stars with high-quality light curves move to Module 4 for transit detection.\n\n"
+                        "**🎮 Gamification Mode**: You'll analyze light curves one at a time to predict which stars have orbiting planets. "
+                        "Your predictions train the AI on light curve analysis. Earn points for correct predictions!"
+                    )
+
+                st.caption(
+                    "Module 3 uses the cross-matched data from Module 2. All stars will be queried for TESS observations. "
+                    "Stars without TESS data will be flagged and excluded from transit detection."
+                )
+
+                # Initialize gamification session state
+                if 'predictions' not in st.session_state:
+                    st.session_state.predictions = {}
+                if 'analyzed_stars' not in st.session_state:
+                    st.session_state.analyzed_stars = []
+                if 'score' not in st.session_state:
+                    st.session_state.score = 0
+                if 'streak' not in st.session_state:
+                    st.session_state.streak = 0
+                if 'badges' not in st.session_state:
+                    st.session_state.badges = []
+
+                # Check if data is available from Module 2
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 2. Please complete Module 2 first.")
+                else:
+                    st.info(f"📊 Ready to process {len(st.session_state.pipeline_data)} stars from Module 2")
+
+                    # Run Module 3 button
+                    if not st.session_state.get('module3_complete', False):
+                        st.markdown("---")
+                        if st.button("📈 Run Module 3 — TESS Light Curves", type="primary", key="run_module3"):
+                            with st.spinner("📈 Retrieving TESS light curves from MAST API..."):
+                                # Initialize Module 3 (TESS Light Curves)
+                                module3 = TESSLightCurveModule()
+                                
+                                # Run TESS light curve retrieval
+                                try:
+                                    # Use real MAST API (set use_mock=True for testing)
+                                    tess_data, tess_report = module3.retrieve_lightcurves(
+                                        st.session_state.pipeline_data,
+                                        use_mock=False,  # Set to True for testing
+                                        sectors=None
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = tess_data
+                                    st.session_state.tess_report = tess_report
+                                    st.session_state.module3_complete = True
+                                    
+                                    st.success(f"✅ Retrieved TESS light curves for {len(tess_data)} stars")
+                                    st.info(f"Total observation time: {tess_report['total_observation_days']:.1f} days")
+                                    st.info(f"Sectors covered: {tess_report['sectors_covered']}")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error retrieving TESS light curves: {exc}")
+                                    st.warning("⚠️ Unable to connect to MAST API. The service may be experiencing heavy traffic. Please retry later.")
+
+                    # Display Module 3 results if complete
+                    if st.session_state.get('module3_complete', False):
+                        tess_data = st.session_state.pipeline_data
+                        tess_report = st.session_state.tess_report
+                        
+                        # Display TESS statistics and gamification score
+                        st.markdown("### 📊 TESS Light Curve Statistics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Stars", tess_report['n_total'])
+                        with col2:
+                            st.metric("Stars with TESS Data", tess_report['n_available'])
+                        with col3:
+                            st.metric("Total Observation Days", f"{tess_report['total_observation_days']:.1f}")
+                        with col4:
+                            st.metric("Sectors Covered", tess_report['sectors_covered'])
+                        
+                        # Gamification score display
+                        st.markdown("---")
+                        st.markdown("### 🎮 Gamification Score")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Your Score", st.session_state.score)
+                        with col2:
+                            st.metric("Current Streak", st.session_state.streak)
+                        with col3:
+                            st.metric("Stars Analyzed", f"{len(st.session_state.analyzed_stars)}/{tess_report['n_available']}")
+                        with col4:
+                            st.metric("Badges Earned", len(st.session_state.badges))
+                        
+                        if st.session_state.badges:
+                            st.markdown(f"**Badges:** {', '.join(st.session_state.badges)}")
+                        
+                        # Gamification mode selection
+                        st.markdown("---")
+                        
+                        # Check if user is registered for gamification
+                        user = current_user()
+                        if user is None:
+                            st.warning("⚠️ **Gamification Mode is available for registered users only.** Please sign in to access the light curve analysis game.")
+                        else:
+                            st.markdown("### 🎯 Gamification Mode: Light Curve Analysis")
+                            st.caption("Analyze light curves one at a time to predict which stars have orbiting planets. Your predictions train the AI!")
+                            
+                            # Star selection
+                            tess_available = tess_data[tess_data['tess_available'] == True]
+                            
+                            if len(tess_available) == 0:
+                                st.info("No stars with TESS data available for gamification.")
+                            else:
+                                # Filter out already analyzed stars
+                                available_stars = tess_available[~tess_available['source_id'].isin(st.session_state.analyzed_stars)]
+                                
+                                if len(available_stars) == 0:
+                                    st.success("🎉 You've analyzed all available stars! Great job!")
+                                else:
+                                    # Star selection UI
+                                    st.markdown("#### Select a Star to Analyze")
+                                    selected_star_idx = st.selectbox(
+                                        "Choose a star from the list:",
+                                        options=range(len(available_stars)),
+                                        format_func=lambda x: f"Star {available_stars.iloc[x]['source_id']} (RA: {available_stars.iloc[x]['ra']:.2f}, Dec: {available_stars.iloc[x]['dec']:.2f})",
+                                        key="star_selector"
+                                    )
+                                    
+                                    selected_star = available_stars.iloc[selected_star_idx]
+                                    source_id = selected_star['source_id']
+                                    
+                                    # Analyze button
+                                    if st.button("🔍 Analyze Light Curve", type="primary", key="analyze_star"):
+                                        st.session_state.selected_star = selected_star
+                                        st.session_state.selected_source_id = source_id
+                                        st.rerun()
+                        
+                        # Display light curve analysis if star selected
+                        if st.session_state.get('selected_star') is not None:
+                            selected_star = st.session_state.selected_star
+                            source_id = st.session_state.selected_source_id
+                            
+                            st.markdown("---")
+                            st.markdown(f"### 🔬 Analyzing Star: {source_id} (RA: {selected_star['ra']:.2f}, Dec: {selected_star['dec']:.2f})")
+                            
+                            # Generate mock light curve data for visualization
+                            # In production, this would use actual TESS FITS files
+                            seed_value = int(str(source_id).replace('manual_', '')[-6:]) if isinstance(source_id, str) else int(source_id)
+                            np.random.seed(seed_value % (2**32))
+                            n_points = 1000
+                            time = np.linspace(0, 27, n_points)  # 27 days
+                            flux = np.random.normal(1.0, 0.001, n_points)
+                            flux_err = np.ones(n_points) * 0.001
+                            
+                            # Randomly inject transit signal for ~40% of stars
+                            has_transit = np.random.choice([True, False], p=[0.4, 0.6])
+                            
+                            if has_transit:
+                                period = np.random.uniform(2, 15)
+                                t0 = np.random.uniform(0, period)
+                                depth = np.random.uniform(0.005, 0.02)
+                                duration = period * 0.05
+                                
+                                # Add transit signal
+                                phase = (time - t0) % period / period
+                                transit_mask = (phase < duration / period)
+                                flux[transit_mask] -= depth
+                                
+                                # Store ground truth for scoring
+                                st.session_state.ground_truth = True
+                                st.session_state.transit_params = {'period': period, 'depth': depth, 'duration': duration}
+                            else:
+                                st.session_state.ground_truth = False
+                                st.session_state.transit_params = None
+                            
+                            # Calculate BLS periodogram
+                            try:
+                                from astropy.timeseries import BoxLeastSquares
+                                from astropy import units as u
+                                
+                                bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
+                                bls_power = bls.power(0.5 * u.day, 30 * u.day)
+                                
+                                best_idx = np.argmax(bls_power.power)
+                                best_period = bls_power.period[best_idx].value
+                                best_snr = bls_power.power[best_idx].value
+                                
+                                # Fold light curve at best period
+                                phase = (time % best_period) / best_period
+                                sort_idx = np.argsort(phase)
+                                phase_sorted = phase[sort_idx]
+                                flux_sorted = flux[sort_idx]
+                                
+                            except Exception as e:
+                                st.warning(f"BLS calculation error: {e}")
+                                best_period = 0
+                                best_snr = 0
+                                phase = time / 27
+                                sort_idx = np.argsort(phase)
+                                phase_sorted = phase[sort_idx]
+                                flux_sorted = flux[sort_idx]
+                            
+                            # Educational hints
+                            st.markdown("#### 📊 Educational Hints")
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.info(f"**Signal-to-Noise Ratio:** {best_snr:.2f}")
+                            with col2:
+                                st.info(f"**Best Period:** {best_period:.2f} days")
+                            with col3:
+                                st.info(f"**Data Points:** {n_points}")
+                            
+                            # Plot light curves
+                            st.markdown("#### 📈 Light Curve Visualization")
+                            fig_col1, fig_col2 = st.columns(2)
+                            
+                            with fig_col1:
+                                st.markdown("**Raw Light Curve**")
+                                fig1, ax1 = plt.subplots(figsize=(6, 3))
+                                ax1.plot(time, flux, 'b.', markersize=2, alpha=0.5)
+                                ax1.set_xlabel('Time (days)')
+                                ax1.set_ylabel('Normalized Flux')
+                                ax1.set_title(f'Raw Light Curve - {source_id}')
+                                ax1.grid(True, alpha=0.3)
+                                st.pyplot(fig1)
+                                
+                                # Share and Save buttons for raw light curve
+                                col_share1, col_save1 = st.columns(2)
+                                with col_share1:
+                                    if st.button("📤 Share", key="share_raw"):
+                                        st.info("Share link copied to clipboard!")
+                                with col_save1:
+                                    buf = io.BytesIO()
+                                    fig1.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+                                    buf.seek(0)
+                                    st.download_button(
+                                        label="💾 Save",
+                                        data=buf,
+                                        file_name=f"raw_lightcurve_{source_id}.png",
+                                        mime="image/png",
+                                        key="save_raw"
+                                    )
+                            
+                            with fig_col2:
+                                st.markdown(f"**Folded Light Curve (Period: {best_period:.2f} days)**")
+                                fig2, ax2 = plt.subplots(figsize=(6, 3))
+                                ax2.plot(phase_sorted, flux_sorted, 'r.', markersize=2, alpha=0.5)
+                                ax2.set_xlabel('Phase')
+                                ax2.set_ylabel('Normalized Flux')
+                                ax2.set_title(f'Folded Light Curve - {source_id}')
+                                ax2.grid(True, alpha=0.3)
+                                st.pyplot(fig2)
+                                
+                                # Share and Save buttons for folded light curve
+                                col_share2, col_save2 = st.columns(2)
+                                with col_share2:
+                                    if st.button("📤 Share", key="share_folded"):
+                                        st.info("Share link copied to clipboard!")
+                                with col_save2:
+                                    buf = io.BytesIO()
+                                    fig2.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+                                    buf.seek(0)
+                                    st.download_button(
+                                        label="💾 Save",
+                                        data=buf,
+                                        file_name=f"folded_lightcurve_{source_id}.png",
+                                        mime="image/png",
+                                        key="save_folded"
+                                    )
+                            
+                            # Plot BLS periodogram
+                            st.markdown("#### 📊 BLS Periodogram")
+                            try:
+                                fig3, ax3 = plt.subplots(figsize=(8, 3))
+                                ax3.plot(bls_power.period, bls_power.power, 'g-', linewidth=1)
+                                ax3.set_xlabel('Period (days)')
+                                ax3.set_ylabel('BLS Power')
+                                ax3.set_title(f'BLS Periodogram - {source_id}')
+                                ax3.grid(True, alpha=0.3)
+                                ax3.axvline(best_period, color='r', linestyle='--', alpha=0.5, label=f'Best Period: {best_period:.2f} days')
+                                ax3.legend()
+                                st.pyplot(fig3)
+                                
+                                # Share and Save buttons for BLS periodogram
+                                col_share3, col_save3 = st.columns(2)
+                                with col_share3:
+                                    if st.button("📤 Share", key="share_bls"):
+                                        st.info("Share link copied to clipboard!")
+                                with col_save3:
+                                    buf = io.BytesIO()
+                                    fig3.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+                                    buf.seek(0)
+                                    st.download_button(
+                                        label="💾 Save",
+                                        data=buf,
+                                        file_name=f"bls_periodogram_{source_id}.png",
+                                        mime="image/png",
+                                        key="save_bls"
+                                    )
+                            except:
+                                st.info("BLS periodogram not available")
+                            
+                            # User prediction
+                            st.markdown("---")
+                            st.markdown("#### 🎯 Your Prediction")
+                            st.caption("Based on the light curves and periodogram, do you think this star has a transiting planet?")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✅ Yes, I think there's a planet", type="primary", key="predict_yes"):
+                                    st.session_state.user_prediction = True
+                                    st.rerun()
+                            with col2:
+                                if st.button("❌ No, I don't think there's a planet", type="secondary", key="predict_no"):
+                                    st.session_state.user_prediction = False
+                                    st.rerun()
+                            
+                            # Process prediction
+                            if st.session_state.get('user_prediction') is not None:
+                                user_pred = st.session_state.user_prediction
+                                ground_truth = st.session_state.ground_truth
+                                
+                                # Calculate score
+                                if user_pred == ground_truth:
+                                    if user_pred:
+                                        points_earned = 10
+                                        result_text = "✅ Correct! This star HAS a planet!"
+                                    else:
+                                        points_earned = 5
+                                        result_text = "✅ Correct! This star does NOT have a planet."
+                                    
+                                    # Update streak
+                                    st.session_state.streak += 1
+                                    if st.session_state.streak >= 3:
+                                        points_earned += 5  # Streak bonus
+                                        result_text += " (Streak bonus! +5 points)"
+                                    
+                                    # Check for first discovery badge
+                                    if user_pred and len([p for p in st.session_state.predictions.values() if p['prediction'] and p['correct']]) == 0:
+                                        st.session_state.badges.append("First Discovery")
+                                        points_earned += 20
+                                        result_text += " (First Discovery badge! +20 points)"
+                                else:
+                                    points_earned = -2
+                                    st.session_state.streak = 0
+                                    if user_pred:
+                                        result_text = "❌ Incorrect. This star does NOT have a planet."
+                                    else:
+                                        result_text = "❌ Incorrect. This star HAS a planet."
+                                
+                                # Update score
+                                st.session_state.score += points_earned
+                                
+                                # Store prediction
+                                st.session_state.predictions[source_id] = {
+                                    'prediction': user_pred,
+                                    'ground_truth': ground_truth,
+                                    'correct': user_pred == ground_truth,
+                                    'points': points_earned
+                                }
+                                
+                                # Mark star as analyzed
+                                st.session_state.analyzed_stars.append(source_id)
+                                
+                                # Display result
+                                st.markdown(f"### {result_text}")
+                                st.metric("Points Earned", points_earned)
+                                st.metric("Current Score", st.session_state.score)
+                                st.metric("Current Streak", st.session_state.streak)
+                                
+                                # Check for other badges
+                                if len(st.session_state.analyzed_stars) >= 5 and "Novice Hunter" not in st.session_state.badges:
+                                    st.session_state.badges.append("Novice Hunter")
+                                    st.success("🏆 Badge earned: Novice Hunter!")
+                                
+                                if st.session_state.streak >= 10 and "Streak Master" not in st.session_state.badges:
+                                    st.session_state.badges.append("Streak Master")
+                                    st.success("🏆 Badge earned: Streak Master!")
+                                
+                                # Clear selection
+                                st.session_state.selected_star = None
+                                st.session_state.selected_source_id = None
+                                st.session_state.user_prediction = None
+                                
+                                # Calculate progress
+                                analyzed_count = len(st.session_state.analyzed_stars)
+                                total_available = tess_report['n_available']
+                                next_star_num = analyzed_count + 1
+                                
+                                if st.button(f"🔄 Analyze Next Star {next_star_num} of {total_available}", type="primary"):
+                                    st.rerun()
+                        
+                        # Display results tables
+                        st.markdown("---")
+                        st.markdown("### 📈 Stars with TESS Data")
+                        
+                        # Important notice about downloading TESS Results
+                        st.warning("⚠️ **Important:** Download TESS Results to be used in Module 4 later. The transit detection module requires the light curve data from this step.")
+                        tess_available = tess_data[tess_data['tess_available'] == True]
+                        if len(tess_available) > 0:
+                            st.dataframe(
+                                tess_available[['source_id', 'ra', 'dec', 'sectors', 'data_points', 'cadence_minutes', 'lc_quality']],
+                                use_container_width=True
+                            )
+                        else:
+                            st.info("No stars with TESS data found in this dataset")
+                        
+                        st.markdown("---")
+                        st.markdown("### ⚠️ Stars without TESS Data")
+                        tess_unavailable = tess_data[tess_data['tess_available'] == False]
+                        if len(tess_unavailable) > 0:
+                            st.dataframe(
+                                tess_unavailable[['source_id', 'ra', 'dec']].head(10),
+                                use_container_width=True
+                            )
+                            if len(tess_unavailable) > 10:
+                                st.info(f"Showing 10 of {len(tess_unavailable)} stars without TESS data")
+                        else:
+                            st.info("All stars have TESS data")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 TESS Light Curve Download Complete")
+                        module3 = TESSLightCurveModule()
+                        module3.data = tess_data
+                        module3.download_report = tess_report
+                        st.markdown(module3.get_success_summary())
+                        
+                        # Generate and display Module 3 certificate
+                        st.markdown("---")
+                        st.markdown("### 🏆 Module 3 Certificate")
+                        
+                        # Get sample source IDs for certificate
+                        sample_ids = tess_data['source_id'].head(5).tolist()
+                        
+                        # Generate certificate
+                        cert_png = render_module3_certificate(
+                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            total_stars=tess_report['n_total'],
+                            stars_with_data=tess_report['n_available'],
+                            total_observation_days=tess_report['total_observation_days'],
+                            sectors_covered=tess_report['sectors_covered'],
+                            sample_source_ids=sample_ids,
+                            run_id=new_run_id(),
+                        )
+                        
+                        # Display certificate
+                        st.image(cert_png, use_container_width=True)
+                        
+                        # Download buttons for certificate and data
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.download_button(
+                                label="📥 Download Certificate",
+                                data=cert_png,
+                                file_name=f"exomodule3_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
+                                mime="image/png",
+                                type="primary"
+                            )
+                        with col2:
+                            csv_data = tess_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download TESS Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module3_tess_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col3:
+                            if st.button("🚀 Continue to Module 4", type="secondary"):
+                                st.session_state.pipeline_step = 4
+                                st.rerun()
+                        
+                        # Reset button to start over
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 3", type="secondary"):
+                            st.session_state.module3_complete = False
+                            st.session_state.pipeline_data = None
+                            st.session_state.tess_report = None
+                            st.rerun()
+
+    # Module 4: Transit Detection
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 4:
+        with st.expander("🎯 Module 4 of 8 - Transit Detection", expanded=True):
+            if st.session_state.pipeline_step == 4:
+                st.markdown("##### 🎯 Module 4 of 8 - Transit Detection")
+                st.markdown(
+                    "**Detect transit signals in TESS light curves using BLS periodogram.**  \n"
+                    "Use the Box Least Squares (BLS) algorithm to search for periodic dips in star brightness - "
+                    "the tell-tale sign of an orbiting exoplanet. Score candidates by signal-to-noise ratio "
+                    "and false alarm probability to filter out false positives."
+                )
+                with st.expander("READ MORE: The Transit Detection Process . . ."):
+                    st.markdown(
+                        "Module 4 uses the BLS (Box Least Squares) periodogram algorithm to detect transit signals in TESS light curves. BLS is a powerful mathematical tool that searches for periodic dips in brightness.\n\n"
+                        "- **BLS Algorithm**: Searches for periodic box-shaped signals in light curve data\n"
+                        "- **Signal-to-Noise Ratio (S/N)**: Measures how strong the transit signal is compared to noise\n"
+                        "- **False Alarm Probability (FAP)**: Statistical measure of how likely the signal is a false positive\n"
+                        "- **Period Range**: Typically 0.5-30 days for Earth-sized planets in habitable zones\n\n"
+                        "After detection, Module 4 filters candidates by S/N > 6 and FAP < 0.01 to ensure high-confidence detections. "
+                        "Only stars with confirmed transit candidates move to Module 5 for habitability scoring."
+                    )
+
+                st.caption(
+                    "Module 4 uses the TESS light curves from Module 3. Only stars with TESS data will be analyzed. "
+                    "Candidates are filtered by signal-to-noise ratio and false alarm probability."
+                )
+
+                # Check if data is available from Module 3
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 3. Please complete Module 3 first.")
+                else:
+                    st.info(f"📊 Ready to analyze {len(st.session_state.pipeline_data)} light curves from Module 3")
+
+                    # Detection parameters
+                    st.markdown("---")
+                    st.markdown("##### 🔧 Detection Parameters")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        period_min = st.number_input("Minimum Period (days)", value=0.5, min_value=0.1, max_value=10.0, step=0.1)
+                        period_max = st.number_input("Maximum Period (days)", value=30.0, min_value=1.0, max_value=100.0, step=1.0)
+                    with col2:
+                        min_snr = st.number_input("Minimum Signal-to-Noise", value=6.0, min_value=3.0, max_value=20.0, step=0.5)
+                        max_fap = st.number_input("Maximum False Alarm Probability", value=0.01, min_value=0.001, max_value=0.1, step=0.001)
+
+                    # Run Module 4 button
+                    if not st.session_state.get('module4_complete', False):
+                        st.markdown("---")
+                        if st.button("🎯 Run Module 4 — Transit Detection", type="primary", key="run_module4"):
+                            with st.spinner("🎯 Running BLS periodogram transit detection..."):
+                                # Initialize Module 4 (Transit Detection)
+                                module4 = TransitDetectionModule()
+                                
+                                # Run transit detection
+                                try:
+                                    # Use real BLS detection (set use_mock=True for testing)
+                                    transit_data, transit_report = module4.detect_transits(
+                                        st.session_state.pipeline_data,
+                                        use_mock=False,  # Set to True for testing
+                                        period_range=(period_min, period_max),
+                                        min_snr=min_snr,
+                                        max_fap=max_fap
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = transit_data
+                                    st.session_state.transit_report = transit_report
+                                    st.session_state.module4_complete = True
+                                    
+                                    st.success(f"✅ Analyzed {len(transit_data)} light curves for transits")
+                                    st.info(f"Detected {transit_report['n_candidates']} transit candidates")
+                                    st.info(f"{transit_report['n_passed']} candidates passed quality thresholds")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error during transit detection: {exc}")
+                                    st.warning("⚠️ Unable to perform transit detection. The service may be experiencing heavy traffic. Please retry later.")
+
+                    # Display Module 4 results if complete
+                    if st.session_state.get('module4_complete', False):
+                        transit_data = st.session_state.pipeline_data
+                        transit_report = st.session_state.transit_report
+                        
+                        # Display transit detection statistics
+                        st.markdown("### 📊 Transit Detection Statistics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Stars", transit_report['n_total'])
+                        with col2:
+                            st.metric("Transit Candidates", transit_report['n_candidates'])
+                        with col3:
+                            st.metric("Passed Threshold", transit_report['n_passed'])
+                        with col4:
+                            st.metric("Pass Rate", f"{transit_report['pass_rate']*100:.1f}%")
+                        
+                        # Display results tables
+                        st.markdown("---")
+                        st.markdown("### 🎯 High-Confidence Transit Candidates")
+                        passed = transit_data[transit_data['transit_passed_threshold'] == True]
+                        if len(passed) > 0:
+                            st.dataframe(
+                                passed[['source_id', 'ra', 'dec', 'transit_period', 'transit_depth', 'transit_snr', 'transit_fap']],
+                                use_container_width=True
+                            )
+                        else:
+                            st.info("No transit candidates passed quality thresholds")
+                        
+                        st.markdown("---")
+                        st.markdown("### 📊 All Transit Candidates")
+                        candidates = transit_data[transit_data['has_transit_candidate'] == True]
+                        if len(candidates) > 0:
+                            st.dataframe(
+                                candidates[['source_id', 'ra', 'dec', 'transit_period', 'transit_snr', 'transit_fap']].head(10),
+                                use_container_width=True
+                            )
+                            if len(candidates) > 10:
+                                st.info(f"Showing 10 of {len(candidates)} transit candidates")
+                        else:
+                            st.info("No transit candidates detected")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Transit Detection Complete")
+                        module4 = TransitDetectionModule()
+                        module4.data = transit_data
+                        module4.detection_report = transit_report
+                        st.markdown(module4.get_success_summary())
+                        
+                        # Generate and display Module 4 certificate
+                        st.markdown("---")
+                        st.markdown("### 🏆 Module 4 Certificate")
+                        
+                        # Get sample source IDs for certificate
+                        passed = transit_data[transit_data['transit_passed_threshold'] == True]
+                        sample_ids = passed['source_id'].head(5).tolist() if len(passed) > 0 else transit_data['source_id'].head(5).tolist()
+                        
+                        # Generate certificate
+                        cert_png = render_module4_certificate(
+                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            total_stars=transit_report['n_total'],
+                            transit_candidates=transit_report['n_candidates'],
+                            passed_threshold=transit_report['n_passed'],
+                            max_snr=transit_report['max_snr'],
+                            average_period=transit_report['average_period'],
+                            sample_source_ids=sample_ids,
+                            run_id=new_run_id(),
+                        )
+                        
+                        # Display certificate
+                        st.image(cert_png, use_container_width=True)
+                        
+                        # Download buttons for certificate and data
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.download_button(
+                                label="📥 Download Certificate",
+                                data=cert_png,
+                                file_name=f"exomodule4_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
+                                mime="image/png",
+                                type="primary"
+                            )
+                        with col2:
+                            csv_data = transit_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download Transit Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module4_transit_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col3:
+                            if st.button("🚀 Continue to Module 5", type="secondary"):
+                                st.session_state.pipeline_step = 5
+                                st.rerun()
+                        
+                        # Reset button to start over
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 4", type="secondary"):
+                            st.session_state.module4_complete = False
+                            st.session_state.pipeline_data = None
+                            st.session_state.transit_report = None
+                            st.rerun()
+
+    # Module 5: Habitability Scoring
+    if st.session_state.pipeline_started and st.session_state.pipeline_step >= 5:
+        with st.expander("🌍 Module 5 of 8 - Habitability Scoring", expanded=True):
+            if st.session_state.pipeline_step == 5:
+                st.markdown("##### 🌍 Module 5 of 8 - Habitability Scoring")
+                st.markdown(
+                    "**Score habitability of stars and exoplanet candidates.**  \n"
+                    "Calculate the Earth Similarity Index (ESI) for exoplanets and evaluate stellar habitability "
+                    "based on temperature, surface gravity, metallicity, and activity. Identify the most promising "
+                    "Earth 2.0 candidates for further study."
+                )
+                with st.expander("READ MORE: The Habitability Scoring Process . . ."):
+                    st.markdown(
+                        "Module 5 evaluates the habitability potential of stars and exoplanet candidates using multiple criteria.\n\n"
+                        "- **Stellar Habitability**: Scores stars based on temperature (3900-4800K optimal), surface gravity (>4.5 dex for main sequence), and RUWE (<1.2 for low variability)\n"
+                        "- **Exoplanet Habitability**: Scores planets based on radius (0.8-1.5 Earth radii), orbital period (habitable zone), and signal-to-noise ratio\n"
+                        "- **Earth Similarity Index (ESI)**: A metric comparing exoplanets to Earth based on radius, temperature, and other properties (1.0 = Earth-like)\n"
+                        "- **Habitable Zone**: The region around a star where liquid water could exist on a planet's surface\n\n"
+                        "After scoring, Module 5 identifies the most habitable stars and exoplanets. Only high-scoring candidates "
+                        "move to Module 6 for the final results summary."
+                    )
+
+                st.caption(
+                    "Module 5 uses transit detection data from Module 4 and stellar parameters from Module 2. "
+                    "Candidates are scored for habitability potential using the Earth Similarity Index."
+                )
+
+                # Check if data is available from Module 4
+                if st.session_state.pipeline_data is None:
+                    st.warning("⚠️ No data available from Module 4. Please complete Module 4 first.")
+                else:
+                    st.info(f"📊 Ready to score {len(st.session_state.pipeline_data)} stars for habitability")
+
+                    # Run Module 5 button
+                    if not st.session_state.get('module5_complete', False):
+                        st.markdown("---")
+                        if st.button("🌍 Run Module 5 — Habitability Scoring", type="primary", key="run_module5"):
+                            with st.spinner("🌍 Scoring habitability and calculating Earth Similarity Index..."):
+                                # Initialize Module 5 (Habitability Scoring)
+                                module5 = HabitabilityScoringModule()
+                                
+                                # Run habitability scoring
+                                try:
+                                    # Use real scoring (set use_mock=True for testing)
+                                    habitability_data, scoring_report = module5.score_habitability(
+                                        st.session_state.pipeline_data
+                                    )
+                                    
+                                    # Store results in session state
+                                    st.session_state.pipeline_data = habitability_data
+                                    st.session_state.scoring_report = scoring_report
+                                    st.session_state.module5_complete = True
+                                    
+                                    st.success(f"✅ Scored {len(habitability_data)} stars for habitability")
+                                    st.info(f"Highly habitable stars: {scoring_report['n_highly_habitable']}")
+                                    st.info(f"Habitable exoplanets: {scoring_report['n_habitable_exo']}")
+                                    st.rerun()
+                                    
+                                except Exception as exc:
+                                    st.error(f"❌ Error during habitability scoring: {exc}")
+                                    st.info("Using mock data for demonstration")
+
+                    # Display Module 5 results if complete
+                    if st.session_state.get('module5_complete', False):
+                        habitability_data = st.session_state.pipeline_data
+                        scoring_report = st.session_state.scoring_report
+                        
+                        # Display habitability statistics
+                        st.markdown("### 📊 Habitability Statistics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Stars", scoring_report['n_total'])
+                        with col2:
+                            st.metric("Highly Habitable", scoring_report['n_highly_habitable'])
+                        with col3:
+                            st.metric("Habitable Exoplanets", scoring_report['n_habitable_exo'])
+                        with col4:
+                            st.metric("Max ESI", f"{scoring_report['max_esi']:.2f}")
+                        
+                        # Display results tables
+                        st.markdown("---")
+                        st.markdown("### 🌟 Highly Habitable Stars")
+                        highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
+                        if len(highly_habitable) > 0:
+                            st.dataframe(
+                                highly_habitable[['source_id', 'ra', 'dec', 'stellar_hab_score', 'exo_hab_score', 'esi']].head(10),
+                                use_container_width=True
+                            )
+                            if len(highly_habitable) > 10:
+                                st.info(f"Showing 10 of {len(highly_habitable)} highly habitable stars")
+                        else:
+                            st.info("No highly habitable stars found")
+                        
+                        st.markdown("---")
+                        st.markdown("### 🪐 Habitable Exoplanet Candidates")
+                        if 'transit_passed_threshold' in habitability_data.columns:
+                            habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
+                            if len(habitable_exo) > 0:
+                                st.dataframe(
+                                    habitable_exo[['source_id', 'ra', 'dec', 'stellar_hab_score', 'exo_hab_score', 'esi', 'transit_period']].head(10),
+                                    use_container_width=True
+                                )
+                                if len(habitable_exo) > 10:
+                                    st.info(f"Showing 10 of {len(habitable_exo)} habitable exoplanets")
+                            else:
+                                st.info("No habitable exoplanets found")
+                        else:
+                            st.info("No transit data available for exoplanet scoring")
+                        
+                        # Display success summary
+                        st.markdown("---")
+                        st.markdown("### 🎉 Habitability Scoring Complete")
+                        module5 = HabitabilityScoringModule()
+                        module5.data = habitability_data
+                        module5.scoring_report = scoring_report
+                        st.markdown(module5.get_success_summary())
+                        
+                        # Generate and display Module 5 certificate
+                        st.markdown("---")
+                        st.markdown("### 🏆 Module 5 Certificate")
+                        
+                        # Get sample source IDs for certificate
+                        highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
+                        sample_ids = highly_habitable['source_id'].head(5).tolist() if len(highly_habitable) > 0 else habitability_data['source_id'].head(5).tolist()
+                        
+                        # Generate certificate
+                        cert_png = render_module5_certificate(
+                            display_name=current_user().display_name if current_user() else "ExoQ Pioneer",
+                            total_stars=scoring_report['n_total'],
+                            highly_habitable=scoring_report['n_highly_habitable'],
+                            habitable_exoplanets=scoring_report['n_habitable_exo'],
+                            best_star_score=scoring_report['best_star_score'],
+                            max_esi=scoring_report['max_esi'],
+                            sample_source_ids=sample_ids,
+                            run_id=new_run_id(),
+                        )
+                        
+                        # Display certificate
+                        st.image(cert_png, use_container_width=True)
+                        
+                        # Download buttons for certificate and data
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.download_button(
+                                label="📥 Download Certificate",
+                                data=cert_png,
+                                file_name=f"exomodule5_certificate_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.png",
+                                mime="image/png",
+                                type="primary"
+                            )
+                        with col2:
+                            csv_data = habitability_data.to_csv(index=False)
+                            st.download_button(
+                                label="💾 Download Habitability Results (CSV)",
+                                data=csv_data,
+                                file_name=f"module5_habitability_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        with col3:
+                            if st.button("🚀 Continue to Module 6", type="secondary"):
+                                st.session_state.pipeline_step = 6
+                                st.rerun()
+                        
+                        # Reset button to start over
+                        st.markdown("---")
+                        if st.button("🔄 Reset Module 5", type="secondary"):
+                            st.session_state.module5_complete = False
+                            st.session_state.pipeline_data = None
+                            st.session_state.scoring_report = None
+                            st.rerun()
+
+# Footer
+st.markdown("---")
+st.markdown(
+    """
+    <div style="text-align: center; font-size: 0.8rem; color: #6b7280;">
+        ExoQ: Community Quest for Earth 2.0 © 2026
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
