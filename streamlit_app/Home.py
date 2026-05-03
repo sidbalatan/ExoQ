@@ -1530,14 +1530,20 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
 
     # Module 3: TESS Light Curves
     if st.session_state.pipeline_started and st.session_state.pipeline_step >= 3:
-        with st.expander("📈 Module 3 of 8 - TESS Light Curves", expanded=True):
+        with st.expander("📈 Module 3 of 8 - TESS Light Curves and Join Gamify LM", expanded=True):
             if st.session_state.pipeline_step == 3:
-                st.markdown("##### 📥 Module 3 of 8 - TESS Light Curves")
+                st.markdown("##### 📥 Module 3 of 8 - TESS Light Curves and Join Gamify LM")
                 st.markdown(
                     "**Download TESS light curves for target stars from MAST API.**  \n"
                     "Retrieve photometric data from NASA's TESS mission to measure star brightness over time. "
                     "Light curves are essential for detecting transiting exoplanets - when a planet passes in front of its star, "
                     "we see a characteristic dip in brightness."
+                )
+                st.info(
+                    "**🎮 Join the Gamify LM!**  \n"
+                    "Gamification is not only fun and challenging but also helps train the AI model. "
+                    "Every correct and wrong choice helps the LM learn what constitutes correct and incorrect light curves. "
+                    "**Awards will be given to top users who occupy the top 3 positions in the Leaderboard!**"
                 )
                 with st.expander("READ MORE: The TESS Light Curve Process . . ."):
                     st.markdown(
@@ -1673,7 +1679,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(2 * u.day, 30 * u.day)
+                                bls_power = bls.power(0.5 * u.day, 100 * u.day)
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1689,10 +1695,8 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 st.warning(f"BLS calculation error: {e}")
                                 best_period = 0
                                 best_snr = 0
-                                phase = time / 27
-                                sort_idx = np.argsort(phase)
-                                phase_sorted = phase[sort_idx]
-                                flux_sorted = flux[sort_idx]
+                                phase_sorted = time
+                                flux_sorted = flux
                             
                             # Plot light curves
                             fig_col1, fig_col2 = st.columns(2)
@@ -1734,16 +1738,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 plt.close(fig3)
                             except:
                                 pass
-                            
-                            # Display star information
-                            st.markdown("#### 📋 Star Information")
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.info(f"**Signal-to-Noise Ratio:** {best_snr:.2f}")
-                            with col2:
-                                st.info(f"**Best Period:** {best_period:.2f} days")
-                            with col3:
-                                st.info(f"**Data Points:** {n_points}")
                             
                         else:
                             st.info("No stars with TESS data found in this dataset")
@@ -1810,7 +1804,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                     
                                     # Analyze button - disable if already analyzed
                                     is_analyzed = star_options[selected_star_idx]['analyzed']
-                                    if st.button("🔍 Analyze Light Curve", type="primary", key="analyze_star", disabled=is_analyzed):
+                                    if st.button("🔍 Analyze Light Curve | Join Gamify | Earn Points", type="primary", key="analyze_star", disabled=is_analyzed):
                                         if not is_analyzed:
                                             st.session_state.selected_star = selected_star_data
                                             st.session_state.selected_source_id = source_id
@@ -1876,7 +1870,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 from astropy import units as u
                                 
                                 bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.power(2 * u.day, 30 * u.day)
+                                bls_power = bls.power(0.5 * u.day, 100 * u.day)
                                 
                                 best_idx = np.argmax(bls_power.power)
                                 best_period = bls_power.period[best_idx].value
@@ -1892,21 +1886,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 st.warning(f"BLS calculation error: {e}")
                                 best_period = 0
                                 best_snr = 0
-                                phase = time / 27
-                                sort_idx = np.argsort(phase)
-                                phase_sorted = phase[sort_idx]
-                                flux_sorted = flux[sort_idx]
+                                phase_sorted = time
+                                flux_sorted = flux
                             
-                            # Educational hints
-                            st.markdown("#### 📊 Educational Hints")
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.info(f"**Signal-to-Noise Ratio:** {best_snr:.2f}")
-                            with col2:
-                                st.info(f"**Best Period:** {best_period:.2f} days")
-                            with col3:
-                                st.info(f"**Data Points:** {n_points}")
-                            
+                                                        
                             # Plot light curves
                             st.markdown("#### 📈 Light Curve Visualization")
                             fig_col1, fig_col2 = st.columns(2)
@@ -1965,6 +1948,21 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                         key="save_folded"
                                     )
                             
+                            # User prediction (moved before BLS Periodogram)
+                            st.markdown("---")
+                            st.markdown("#### 🎯 Your Prediction")
+                            st.caption("Based on the light curves, do you think this star has a transiting planet?")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✅ Yes, I think there's a planet", type="primary", key="predict_yes"):
+                                    st.session_state.user_prediction = True
+                                    st.rerun()
+                            with col2:
+                                if st.button("❌ No, I don't think there's a planet", type="secondary", key="predict_no"):
+                                    st.session_state.user_prediction = False
+                                    st.rerun()
+                            
                             # Plot BLS periodogram
                             st.markdown("#### 📊 BLS Periodogram")
                             try:
@@ -1996,21 +1994,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                     )
                             except:
                                 st.info("BLS periodogram not available")
-                            
-                            # User prediction
-                            st.markdown("---")
-                            st.markdown("#### 🎯 Your Prediction")
-                            st.caption("Based on the light curves and periodogram, do you think this star has a transiting planet?")
-                            
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("✅ Yes, I think there's a planet", type="primary", key="predict_yes"):
-                                    st.session_state.user_prediction = True
-                                    st.rerun()
-                            with col2:
-                                if st.button("❌ No, I don't think there's a planet", type="secondary", key="predict_no"):
-                                    st.session_state.user_prediction = False
-                                    st.rerun()
                             
                             # Process prediction
                             if st.session_state.get('user_prediction') is not None:
@@ -2123,7 +2106,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                         st.rerun()
                                 
                                 with col_hab:
-                                    if st.button("🌍 Continue to Module 6: Habitability", type="secondary", key="continue_to_habitability"):
+                                    if st.button("🌍 Continue to Module 5: Habitability", type="secondary", key="continue_to_habitability"):
                                         # Clear current star selection
                                         st.session_state.selected_star = None
                                         st.session_state.selected_source_id = None
@@ -2489,8 +2472,14 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         st.markdown("### 🌟 Highly Habitable Stars")
                         highly_habitable = habitability_data[habitability_data['stellar_hab_score'] > 0.8]
                         if len(highly_habitable) > 0:
+                            # Build column list based on available columns
+                            cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
+                            if 'exo_hab_score' in highly_habitable.columns:
+                                cols_to_show.append('exo_hab_score')
+                            if 'esi' in highly_habitable.columns:
+                                cols_to_show.append('esi')
                             st.dataframe(
-                                highly_habitable[['source_id', 'ra', 'dec', 'stellar_hab_score', 'exo_hab_score', 'esi']].head(10),
+                                highly_habitable[cols_to_show].head(10),
                                 use_container_width=True
                             )
                             if len(highly_habitable) > 10:
@@ -2501,10 +2490,23 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         st.markdown("---")
                         st.markdown("### 🪐 Habitable Exoplanet Candidates")
                         if 'transit_passed_threshold' in habitability_data.columns:
-                            habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
+                            # Check if exo_hab_score column exists
+                            if 'exo_hab_score' in habitability_data.columns:
+                                habitable_exo = habitability_data[(habitability_data['transit_passed_threshold'] == True) & (habitability_data['exo_hab_score'] > 0.6)]
+                            else:
+                                habitable_exo = habitability_data[habitability_data['transit_passed_threshold'] == True]
+                            
                             if len(habitable_exo) > 0:
+                                # Build column list based on available columns
+                                cols_to_show = ['source_id', 'ra', 'dec', 'stellar_hab_score']
+                                if 'exo_hab_score' in habitable_exo.columns:
+                                    cols_to_show.append('exo_hab_score')
+                                if 'esi' in habitable_exo.columns:
+                                    cols_to_show.append('esi')
+                                if 'transit_period' in habitable_exo.columns:
+                                    cols_to_show.append('transit_period')
                                 st.dataframe(
-                                    habitable_exo[['source_id', 'ra', 'dec', 'stellar_hab_score', 'exo_hab_score', 'esi', 'transit_period']].head(10),
+                                    habitable_exo[cols_to_show].head(10),
                                     use_container_width=True
                                 )
                                 if len(habitable_exo) > 10:
@@ -2564,7 +2566,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 mime="text/csv"
                             )
                         with col3:
-                            if st.button("🚀 Continue to Module 6", type="secondary"):
+                            if st.button("🚀 Continue to Module 5", type="secondary"):
                                 st.session_state.pipeline_step = 6
                                 st.rerun()
                         
