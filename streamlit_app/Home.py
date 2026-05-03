@@ -142,6 +142,21 @@ with st.expander("☰ Navigation Menu", expanded=False):
 st.markdown("---")
 st.markdown("### 🏆 ExoQuest Leaderboard")
 
+# CSS to reduce leaderboard font size by 40%
+st.markdown("""
+<style>
+div[data-testid="stMetricValue"] {
+    font-size: 60% !important;
+}
+div[data-testid="stMetricLabel"] {
+    font-size: 60% !important;
+}
+div[data-testid="stDataFrame"] {
+    font-size: 60% !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 if current_user():
     store = get_store()
     try:
