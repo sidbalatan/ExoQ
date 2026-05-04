@@ -1771,30 +1771,26 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         # Gamification mode selection
                         st.markdown("---")
                         
-                        # Check if user is registered for gamification
-                        user = current_user()
-                        if user is None:
-                            st.warning("⚠️ **Gamification Mode is available for registered users only.** Please sign in to access the light curve analysis game.")
+                        # Gamification Mode (available to all users)
+                        st.markdown("### 🎯 Gamification Mode: Light Curve Analysis")
+                        st.caption("Analyze light curves one at a time to predict which stars have orbiting planets. Your predictions train the AI!")
+                        
+                        # Star selection
+                        if 'tess_available' in tess_data.columns:
+                            tess_available = tess_data[tess_data['tess_available'] == True]
                         else:
-                            st.markdown("### 🎯 Gamification Mode: Light Curve Analysis")
-                            st.caption("Analyze light curves one at a time to predict which stars have orbiting planets. Your predictions train the AI!")
+                            tess_available = tess_data
+                        
+                        if len(tess_available) == 0:
+                            st.info("No stars with TESS data available for gamification.")
+                        else:
+                            # Show all stars, but mark which ones are analyzed
+                            analyzed_set = set(st.session_state.analyzed_stars)
                             
-                            # Star selection
-                            if 'tess_available' in tess_data.columns:
-                                tess_available = tess_data[tess_data['tess_available'] == True]
-                            else:
-                                tess_available = tess_data
-                            
-                            if len(tess_available) == 0:
-                                st.info("No stars with TESS data available for gamification.")
-                            else:
-                                # Show all stars, but mark which ones are analyzed
-                                analyzed_set = set(st.session_state.analyzed_stars)
-                                
-                                # Create a list of star indices with their status
-                                star_options = []
-                                for idx, row in tess_available.iterrows():
-                                    is_analyzed = row['source_id'] in analyzed_set
+                            # Create a list of star indices with their status
+                            star_options = []
+                            for idx, row in tess_available.iterrows():
+                                is_analyzed = row['source_id'] in analyzed_set
                                     star_options.append({
                                         'index': idx,
                                         'data': row,
