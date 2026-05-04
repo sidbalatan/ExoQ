@@ -1672,7 +1672,13 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             st.markdown(f"### 🔬 Light Curve for Star: {lc_source_id}")
                             
                             # Generate light curve data
-                            seed_value = int(str(lc_source_id).replace('manual_', '')[-6:]) if isinstance(lc_source_id, str) else int(lc_source_id)
+                            # Handle NaN values in source_id
+                            if isinstance(lc_source_id, float) and np.isnan(lc_source_id):
+                                seed_value = 42  # Default seed for NaN values
+                            elif isinstance(lc_source_id, str):
+                                seed_value = int(str(lc_source_id).replace('manual_', '')[-6:])
+                            else:
+                                seed_value = int(lc_source_id)
                             np.random.seed(seed_value % (2**32))
                             n_points = 1000
                             time = np.linspace(0, 27, n_points)
