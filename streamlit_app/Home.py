@@ -1124,14 +1124,17 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 type="primary",
                             )
                         with btn_mid:
-                            csv_data = st.session_state.pipeline_data.to_csv(index=False)
-                            st.download_button(
-                                "💾 Save K Dwarf Survivors (CSV)",
-                                data=csv_data,
-                                file_name=f"ExoQ_Module1_KDwarf_Survivors_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                mime="text/csv",
-                                help="Save the K Dwarf survivors from Module 1 for use in Module 2"
-                            )
+                            if st.session_state.pipeline_data is not None:
+                                csv_data = st.session_state.pipeline_data.to_csv(index=False)
+                                st.download_button(
+                                    "💾 Save K Dwarf Survivors (CSV)",
+                                    data=csv_data,
+                                    file_name=f"ExoQ_Module1_KDwarf_Survivors_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv",
+                                    help="Save the K Dwarf survivors from Module 1 for use in Module 2"
+                                )
+                            else:
+                                st.warning("No data available to save. Please run Module 1 first.")
                         with btn_right:
                             st.button(
                                 "🌐 Submit to ExoQ Gallery (coming soon)",

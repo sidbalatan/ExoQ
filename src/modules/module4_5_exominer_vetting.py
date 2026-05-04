@@ -117,10 +117,15 @@ class ExoMinerVettingModule:
             raise ValueError("No valid TIC IDs found in candidate data")
         
         # Create TIC input DataFrame with correct column names for ExoMiner++
+        # ExoMiner++ requires specific column names and structure
         tic_df = pd.DataFrame({
             'tic_id': tic_ids,
             'sector_run': sectors
         })
+        
+        # Ensure columns are in the correct order and have correct types
+        tic_df['tic_id'] = tic_df['tic_id'].astype(int)
+        tic_df['sector_run'] = tic_df['sector_run'].astype(int)
         
         logger.info(f"Extracted {len(tic_df)} TIC IDs from {len(candidates_df)} candidates")
         return tic_df
