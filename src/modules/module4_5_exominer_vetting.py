@@ -188,15 +188,15 @@ class ExoMinerVettingModule:
             '-v', f'{input_dir}:/input:z',
             '-v', f'{output_dir}:/output:z',
             'ghcr.io/nasa/exominer:latest',
-            '--tics_tbl_fp', '/input/tic_ids.csv',
-            '--exominer_pipeline_run_dir', '/output',
+            '--tic_ids_fp', '/input/tic_ids.csv',
+            '--output_dir', '/output',
             '--data_collection_mode', data_collection_mode,
             '--download_spoc_data_products', 'true',
             '--external_data_repository', 'null',
             '--stellar_parameters_source', 'ticv8',
             '--ruwe_source', 'gaiadr2',
-            '--n_processes', '1',
-            '--n_jobs', '1'
+            '--num_processes', '1',
+            '--num_jobs', '1'
         ]
         
         try:
