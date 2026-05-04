@@ -1590,6 +1590,13 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     st.session_state.streak = 0
                 if 'badges' not in st.session_state:
                     st.session_state.badges = []
+                
+                # Reset analyzed_stars when Module 3 starts fresh
+                if not st.session_state.get('module3_complete', False):
+                    st.session_state.analyzed_stars = []
+                    st.session_state.score = 0
+                    st.session_state.streak = 0
+                    st.session_state.badges = []
 
                 # Check if data is available from Module 2
                 if st.session_state.pipeline_data is None:
@@ -1731,10 +1738,6 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             tess_available = tess_data[tess_data['tess_available'] == True]
                         else:
                             tess_available = tess_data
-                        
-                        st.info(f"Debug: tess_data columns: {tess_data.columns.tolist()}")
-                        st.info(f"Debug: tess_data shape: {tess_data.shape}")
-                        st.info(f"Debug: tess_available shape: {tess_available.shape}")
                         
                         if len(tess_available) == 0:
                             st.info("No stars with TESS data available for gamification.")
