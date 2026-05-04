@@ -791,7 +791,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
             st.rerun()
         else:
             inputs = int(st.session_state.get('m1_input_count',
-                          len(st.session_state.pipeline_data)))
+                          len(st.session_state.pipeline_data) if st.session_state.pipeline_data is not None else 0))
 
             # Re-derive the tier on the fly from the actual Gaia DR3 quality
             # columns. We deliberately ignore the CSV's `validation_tier`
