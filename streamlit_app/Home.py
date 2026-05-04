@@ -2413,7 +2413,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                     st.session_state.module4_5_complete = True
                                     
                                     st.success(f"✅ Vetting complete: {vetting_report['n_vetted']} vetted, {vetting_report['n_rejected']} rejected")
-                                    st.info(f"Mean ExoMiner++ score: {vetting_report['mean_score']:.3f}")
+                                    st.info(f"Mean ExoMiner++ score: {vetting_report.get('mean_score', 0):.3f}")
                                     st.rerun()
                                     
                                 except Exception as exc:
