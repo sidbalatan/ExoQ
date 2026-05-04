@@ -118,14 +118,15 @@ class ExoMinerVettingModule:
         
         # Create TIC input DataFrame with correct column names for ExoMiner++
         # ExoMiner++ requires specific column names and structure
+        # Based on error messages, it may need additional columns
         tic_df = pd.DataFrame({
-            'tic_id': tic_ids,
-            'sector_run': sectors
+            'TIC ID': tic_ids,  # Try alternative column name
+            'Sector': sectors    # Try alternative column name
         })
         
         # Ensure columns are in the correct order and have correct types
-        tic_df['tic_id'] = tic_df['tic_id'].astype(int)
-        tic_df['sector_run'] = tic_df['sector_run'].astype(int)
+        tic_df['TIC ID'] = tic_df['TIC ID'].astype(int)
+        tic_df['Sector'] = tic_df['Sector'].astype(int)
         
         logger.info(f"Extracted {len(tic_df)} TIC IDs from {len(candidates_df)} candidates")
         return tic_df
