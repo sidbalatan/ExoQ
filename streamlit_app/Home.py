@@ -1116,13 +1116,16 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     if has_pipeline_data:
                         btn_left, btn_mid, btn_right = st.columns([1, 1, 1])
                         with btn_left:
-                            st.download_button(
-                                "⬇️ Download Certificate (PNG)",
-                                data=st.session_state.certificate_png,
-                                file_name=st.session_state.certificate_name,
-                                mime="image/png",
-                                type="primary",
-                            )
+                            if st.session_state.get('certificate_png') is not None and st.session_state.get('certificate_name') is not None:
+                                st.download_button(
+                                    "⬇️ Download Certificate (PNG)",
+                                    data=st.session_state.certificate_png,
+                                    file_name=st.session_state.certificate_name,
+                                    mime="image/png",
+                                    type="primary",
+                                )
+                            else:
+                                st.warning("Certificate not available. Please complete Module 1 first.")
                         with btn_mid:
                             if st.session_state.pipeline_data is not None:
                                 csv_data = st.session_state.pipeline_data.to_csv(index=False)
