@@ -2481,7 +2481,9 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         st.markdown("### ❌ Rejected Candidates (Below Threshold)")
                         rejected_df = vetting_data[vetting_data['exominer_vetted'] == False]
                         if len(rejected_df) > 0:
-                            cols_to_show = ['source_id', 'ra', 'dec', 'exominer_score']
+                            cols_to_show = ['source_id', 'ra', 'dec']
+                            if 'exominer_score' in rejected_df.columns:
+                                cols_to_show.append('exominer_score')
                             if 'transit_period' in rejected_df.columns:
                                 cols_to_show.append('transit_period')
                             st.dataframe(
