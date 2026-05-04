@@ -1791,18 +1791,18 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                             star_options = []
                             for idx, row in tess_available.iterrows():
                                 is_analyzed = row['source_id'] in analyzed_set
-                                    star_options.append({
-                                        'index': idx,
-                                        'data': row,
-                                        'analyzed': is_analyzed
-                                    })
-                                
-                                # Find next unanalyzed star index
-                                next_unanalyzed_idx = None
-                                for i, star_opt in enumerate(star_options):
-                                    if not star_opt['analyzed']:
-                                        next_unanalyzed_idx = i
-                                        break
+                                star_options.append({
+                                    'index': idx,
+                                    'data': row,
+                                    'analyzed': is_analyzed
+                                })
+                            
+                            # Find next unanalyzed star index
+                            next_unanalyzed_idx = None
+                            for i, star_opt in enumerate(star_options):
+                                if not star_opt['analyzed']:
+                                    next_unanalyzed_idx = i
+                                    break
                                 
                                 if next_unanalyzed_idx is None:
                                     st.success("🎉 You've analyzed all available stars! Great job!")
