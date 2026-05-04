@@ -1840,91 +1840,18 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                                 st.session_state.ground_truth = False
                                 st.session_state.transit_params = None
                             
-                            # Calculate BLS periodogram
-                            try:
-                                from astropy.timeseries import BoxLeastSquares
-                                from astropy import units as u
-                                
-                                bls = BoxLeastSquares(time * u.day, flux, dy=flux_err)
-                                bls_power = bls.autopower(minimum_period=0.5 * u.day, maximum_period=100 * u.day, duration=0.1 * u.day, method='slow')
-                                
-                                best_idx = np.argmax(bls_power.power)
-                                best_period = bls_power.period[best_idx].value
-                                best_snr = bls_power.power[best_idx].value
-                                
-                                # Fold light curve at best period
-                                phase = (time % best_period) / best_period
-                                sort_idx = np.argsort(phase)
-                                phase_sorted = phase[sort_idx]
-                                flux_sorted = flux[sort_idx]
-                                
-                            except Exception as e:
-                                st.warning(f"BLS calculation error: {e}")
-                                best_period = 0
-                                best_snr = 0
-                                phase_sorted = time
-                                flux_sorted = flux
+                            # Plot simple light curve (no BLS to avoid hanging)
+                            st.markdown("#### 📈 Light Curve")
+                            fig, ax = plt.subplots(figsize=(10, 4))
+                            ax.plot(time, flux, 'b.', markersize=2, alpha=0.5)
+                            ax.set_xlabel('Time (days)')
+                            ax.set_ylabel('Normalized Flux')
+                            ax.set_title(f'Light Curve for {source_id}')
+                            ax.grid(True, alpha=0.3)
+                            st.pyplot(fig)
+                            plt.close(fig)
                             
-                                                        
-                            # Plot light curves
-                            st.markdown("#### 📈 Light Curve Visualization")
-                            fig_col1, fig_col2 = st.columns(2)
-                            
-                            with fig_col1:
-                                st.markdown("**Raw Light Curve**")
-                                fig1, ax1 = plt.subplots(figsize=(6, 3))
-                                ax1.plot(time, flux, 'b.', markersize=2, alpha=0.5)
-                                ax1.set_xlabel('Time (days)')
-                                ax1.set_ylabel('Normalized Flux')
-                                ax1.set_title(f'Raw Light Curve - {source_id}')
-                                ax1.grid(True, alpha=0.3)
-                                st.pyplot(fig1)
-                                
-                                # Share and Save buttons for raw light curve
-                                col_share1, col_save1 = st.columns(2)
-                                with col_share1:
-                                    if st.button("📤 Share", key="share_raw"):
-                                        st.info("Share link copied to clipboard!")
-                                with col_save1:
-                                    buf = io.BytesIO()
-                                    fig1.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-                                    buf.seek(0)
-                                    st.download_button(
-                                        label="💾 Save",
-                                        data=buf,
-                                        file_name=f"raw_lightcurve_{source_id}.png",
-                                        mime="image/png",
-                                        key="save_raw"
-                                    )
-                            
-                            with fig_col2:
-                                st.markdown(f"**Folded Light Curve (Period: {best_period:.2f} days)**")
-                                fig2, ax2 = plt.subplots(figsize=(6, 3))
-                                ax2.plot(phase_sorted, flux_sorted, 'r.', markersize=2, alpha=0.5)
-                                ax2.set_xlabel('Phase')
-                                ax2.set_ylabel('Normalized Flux')
-                                ax2.set_title(f'Folded Light Curve - {source_id}')
-                                ax2.grid(True, alpha=0.3)
-                                st.pyplot(fig2)
-                                
-                                # Share and Save buttons for folded light curve
-                                col_share2, col_save2 = st.columns(2)
-                                with col_share2:
-                                    if st.button("📤 Share", key="share_folded"):
-                                        st.info("Share link copied to clipboard!")
-                                with col_save2:
-                                    buf = io.BytesIO()
-                                    fig2.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-                                    buf.seek(0)
-                                    st.download_button(
-                                        label="💾 Save",
-                                        data=buf,
-                                        file_name=f"folded_lightcurve_{source_id}.png",
-                                        mime="image/png",
-                                        key="save_folded"
-                                    )
-                            
-                            # User prediction (moved before BLS Periodogram)
+                            # User prediction
                             st.markdown("---")
                             st.markdown("#### 🎯 Your Prediction")
                             st.caption("Based on the light curves, do you think this star has a transiting planet?")
