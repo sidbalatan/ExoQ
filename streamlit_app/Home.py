@@ -2435,7 +2435,7 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         with col3:
                             st.metric("Rejected", vetting_report['n_rejected'])
                         with col4:
-                            st.metric("Mean Score", f"{vetting_report['mean_score']:.3f}")
+                            st.metric("Mean Score", f"{vetting_report.get('mean_score', 0):.3f}")
                         
                         # Display score distribution
                         st.markdown("---")
