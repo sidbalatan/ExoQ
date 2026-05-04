@@ -1733,6 +1733,17 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         st.markdown("### 🎯 Gamification Mode: Light Curve Analysis")
                         st.caption("Analyze light curves one at a time to predict which stars have orbiting planets. Your predictions train the AI!")
                         
+                        # Reset button
+                        if st.button("🔄 Reset Gamification Progress", key="reset_gamification"):
+                            st.session_state.analyzed_stars = []
+                            st.session_state.score = 0
+                            st.session_state.streak = 0
+                            st.session_state.badges = []
+                            st.session_state.predictions = {}
+                            st.session_state.selected_star = None
+                            st.session_state.selected_source_id = None
+                            st.rerun()
+                        
                         # Star selection
                         if 'tess_available' in tess_data.columns:
                             tess_available = tess_data[tess_data['tess_available'] == True]
