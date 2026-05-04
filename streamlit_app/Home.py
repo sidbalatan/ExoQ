@@ -1732,6 +1732,10 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                         else:
                             tess_available = tess_data
                         
+                        st.info(f"Debug: tess_data columns: {tess_data.columns.tolist()}")
+                        st.info(f"Debug: tess_data shape: {tess_data.shape}")
+                        st.info(f"Debug: tess_available shape: {tess_available.shape}")
+                        
                         if len(tess_available) == 0:
                             st.info("No stars with TESS data available for gamification.")
                         else:
