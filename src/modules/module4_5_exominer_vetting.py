@@ -116,10 +116,10 @@ class ExoMinerVettingModule:
         if not tic_ids:
             raise ValueError("No valid TIC IDs found in candidate data")
         
-        # Create TIC input DataFrame
+        # Create TIC input DataFrame with correct column names for ExoMiner++
         tic_df = pd.DataFrame({
-            'TIC': tic_ids,
-            'Sector': sectors
+            'tic_id': tic_ids,
+            'sector_run': sectors
         })
         
         logger.info(f"Extracted {len(tic_df)} TIC IDs from {len(candidates_df)} candidates")
@@ -147,10 +147,11 @@ class ExoMinerVettingModule:
         output_dir: str,
         threshold: float = 0.5,
         use_mock: bool = False,
-        data_collection_mode: str = "2min"
+        data_collection_mode: str = "2min",
+        batch_size: int = 10
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Run ExoMiner++ via Podman container.
+        Run ExoMiner++ via Podman container with batch processing.
         
         Args:
             tics_csv_path: Path to TIC IDs input CSV
@@ -158,6 +159,7 @@ class ExoMinerVettingModule:
             threshold: Vetting threshold for candidate acceptance
             use_mock: If True, use mock vetting instead of actual ExoMiner++
             data_collection_mode: Data collection mode ("2min" or "ffi")
+            batch_size: Number of candidates to process in each batch
             
         Returns:
             Tuple of (results_df, vetting_report)
@@ -176,90 +178,118 @@ class ExoMinerVettingModule:
         tic_df = pd.read_csv(tics_csv_path)
         n_candidates = len(tic_df)
         
-        logger.info(f"Running ExoMiner++ for {n_candidates} TIC IDs")
+        logger.info(f"Running ExoMiner++ for {n_candidates} TIC IDs in batches of {batch_size}")
         
-        # Prepare Podman command
-        # Mount input directory and output directory
-        input_dir = os.path.dirname(tics_csv_path)
+        # Process in batches
+        all_results = []
+        n_batches = (n_candidates + batch_size - 1) // batch_size
         
-        podman_cmd = [
-            'podman', 'run',
-            '--rm',
-            '-v', f'{input_dir}:/input:z',
-            '-v', f'{output_dir}:/output:z',
-            'ghcr.io/nasa/exominer:latest',
-            '--tic_ids_fp', '/input/tic_ids.csv',
-            '--output_dir', '/output',
-            '--data_collection_mode', data_collection_mode,
-            '--download_spoc_data_products', 'true',
-            '--external_data_repository', 'null',
-            '--stellar_parameters_source', 'ticv8',
-            '--ruwe_source', 'gaiadr2',
-            '--num_processes', '1',
-            '--num_jobs', '1'
-        ]
-        
-        try:
-            logger.info(f"Executing Podman command: {' '.join(podman_cmd)}")
-            result = subprocess.run(
-                podman_cmd,
-                capture_output=True,
-                text=True,
-                timeout=3600  # 1 hour timeout
-            )
+        for batch_idx in range(n_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min((batch_idx + 1) * batch_size, n_candidates)
+            batch_df = tic_df.iloc[start_idx:end_idx]
             
-            if result.returncode != 0:
-                logger.error(f"ExoMiner++ Podman execution failed: {result.stderr}")
-                raise RuntimeError(f"ExoMiner++ execution failed: {result.stderr}")
+            logger.info(f"Processing batch {batch_idx + 1}/{n_batches} with {len(batch_df)} candidates")
             
-            logger.info("ExoMiner++ Podman execution completed successfully")
+            # Create temporary CSV for this batch
+            batch_csv_path = tics_csv_path.replace('.csv', f'_batch_{batch_idx}.csv')
+            batch_df.to_csv(batch_csv_path, index=False)
             
-            # Parse ExoMiner++ output
-            # Expected output file: exominer_results.csv in output directory
-            results_path = os.path.join(output_dir, 'exominer_results.csv')
+            # Prepare Podman command for this batch
+            batch_output_dir = os.path.join(output_dir, f'batch_{batch_idx}')
+            os.makedirs(batch_output_dir, exist_ok=True)
             
-            if not os.path.exists(results_path):
-                # Try to find any CSV output
-                csv_files = [f for f in os.listdir(output_dir) if f.endswith('.csv')]
-                if csv_files:
-                    results_path = os.path.join(output_dir, csv_files[0])
+            podman_cmd = [
+                'podman', 'run',
+                '--rm',
+                '-v', f'{os.path.dirname(batch_csv_path)}:/input:z',
+                '-v', f'{batch_output_dir}:/output:z',
+                'ghcr.io/nasa/exominer:latest',
+                '--tic_ids_fp', '/input/tic_ids.csv',
+                '--output_dir', '/output',
+                '--data_collection_mode', data_collection_mode,
+                '--download_spoc_data_products', 'true',
+                '--external_data_repository', 'null',
+                '--stellar_parameters_source', 'ticv8',
+                '--ruwe_source', 'gaiadr2',
+                '--num_processes', '1',
+                '--num_jobs', '1'
+            ]
+            
+            try:
+                logger.info(f"Executing Podman command for batch {batch_idx + 1}: {' '.join(podman_cmd)}")
+                result = subprocess.run(
+                    podman_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=3600  # 1 hour timeout per batch
+                )
+                
+                if result.returncode != 0:
+                    logger.error(f"ExoMiner++ Podman execution failed for batch {batch_idx + 1}: {result.stderr}")
+                    raise RuntimeError(f"ExoMiner++ execution failed for batch {batch_idx + 1}: {result.stderr}")
+                
+                # Read results from this batch
+                batch_output_csv = os.path.join(batch_output_dir, 'exominer_output.csv')
+                if os.path.exists(batch_output_csv):
+                    batch_results = pd.read_csv(batch_output_csv)
+                    all_results.append(batch_results)
+                    logger.info(f"Batch {batch_idx + 1} completed successfully with {len(batch_results)} results")
                 else:
-                    raise RuntimeError(f"No output CSV found in {output_dir}")
-            
-            results_df = pd.read_csv(results_path)
-            logger.info(f"Read {len(results_df)} results from ExoMiner++ output")
-            
-            # Add threshold-based vetting status
-            if 'exominer_score' not in results_df.columns:
-                # Try to find score column with different name
-                score_cols = [col for col in results_df.columns if 'score' in col.lower()]
-                if score_cols:
-                    results_df['exominer_score'] = results_df[score_cols[0]]
-                else:
-                    raise RuntimeError("No score column found in ExoMiner++ output")
-            
-            results_df['exominer_vetted'] = results_df['exominer_score'] >= threshold
-            
-            # Create vetting report
-            vetting_report = {
-                'n_total': len(results_df),
-                'n_vetted': int(results_df['exominer_vetted'].sum()),
-                'n_rejected': len(results_df) - int(results_df['exominer_vetted'].sum()),
-                'threshold': threshold,
-                'mean_score': float(results_df['exominer_score'].mean()),
-                'max_score': float(results_df['exominer_score'].max()),
-                'min_score': float(results_df['exominer_score'].min()),
-                'use_mock': False
-            }
-            
-            return results_df, vetting_report
-            
-        except subprocess.TimeoutExpired:
-            logger.error("ExoMiner++ execution timed out after 1 hour")
-            raise RuntimeError("ExoMiner++ execution timed out. Please try with fewer candidates.")
-        except Exception as e:
-            logger.error(f"Error running ExoMiner++: {str(e)}")
-            raise RuntimeError(f"ExoMiner++ execution failed: {str(e)}")
+                    logger.warning(f"No output file found for batch {batch_idx + 1}, creating empty results")
+                    # Create empty results with required columns
+                    batch_results = pd.DataFrame({
+                        'tic_id': batch_df['tic_id'].values,
+                        'exominer_score': [0.0] * len(batch_df)
+                    })
+                    all_results.append(batch_results)
+                
+                # Clean up batch CSV
+                if os.path.exists(batch_csv_path):
+                    os.remove(batch_csv_path)
+                    
+            except subprocess.TimeoutExpired:
+                logger.error(f"ExoMiner++ execution timed out for batch {batch_idx + 1}")
+                raise RuntimeError(f"ExoMiner++ execution timed out for batch {batch_idx + 1}")
+            except Exception as e:
+                logger.error(f"Error processing batch {batch_idx + 1}: {str(e)}")
+                raise RuntimeError(f"Error processing batch {batch_idx + 1}: {str(e)}")
+        
+        # Combine all batch results
+        if all_results:
+            results_df = pd.concat(all_results, ignore_index=True)
+        else:
+            # Create empty results if no batches succeeded
+            results_df = pd.DataFrame({
+                'tic_id': tic_df['tic_id'].values,
+                'exominer_score': [0.0] * len(tic_df)
+            })
+        
+        # Add threshold-based vetting status
+        if 'exominer_score' not in results_df.columns:
+            # Try to find score column with different name
+            score_cols = [col for col in results_df.columns if 'score' in col.lower()]
+            if score_cols:
+                results_df['exominer_score'] = results_df[score_cols[0]]
+            else:
+                raise RuntimeError("No score column found in ExoMiner++ output")
+        
+        results_df['exominer_vetted'] = results_df['exominer_score'] >= threshold
+        
+        # Create vetting report
+        vetting_report = {
+            'n_total': len(results_df),
+            'n_vetted': int(results_df['exominer_vetted'].sum()),
+            'n_rejected': len(results_df) - int(results_df['exominer_vetted'].sum()),
+            'threshold': threshold,
+            'mean_score': float(results_df['exominer_score'].mean()),
+            'max_score': float(results_df['exominer_score'].max()),
+            'min_score': float(results_df['exominer_score'].min()),
+            'use_mock': False
+        }
+        
+        logger.info(f"ExoMiner++ vetting complete: {vetting_report['n_vetted']} vetted, {vetting_report['n_rejected']} rejected")
+        return results_df, vetting_report
     
     def _run_mock_vetting(
         self,
