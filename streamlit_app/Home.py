@@ -1113,31 +1113,30 @@ if st.session_state.pipeline_started and st.session_state.pipeline_step >= 0:
                     # Check if pipeline_data exists for save button
                     has_pipeline_data = 'pipeline_data' in st.session_state and st.session_state.pipeline_data is not None
                     
-                    if has_pipeline_data:
-                        btn_left, btn_mid, btn_right = st.columns([1, 1, 1])
-                        with btn_left:
-                            if st.session_state.get('certificate_png') is not None and st.session_state.get('certificate_name') is not None:
-                                st.download_button(
-                                    "⬇️ Download Certificate (PNG)",
-                                    data=st.session_state.certificate_png,
-                                    file_name=st.session_state.certificate_name,
-                                    mime="image/png",
-                                    type="primary",
-                                )
-                            else:
-                                st.warning("Certificate not available. Please complete Module 1 first.")
-                        with btn_mid:
-                            if st.session_state.pipeline_data is not None:
-                                csv_data = st.session_state.pipeline_data.to_csv(index=False)
-                                st.download_button(
-                                    "💾 Save K Dwarf Survivors (CSV)",
-                                    data=csv_data,
-                                    file_name=f"ExoQ_Module1_KDwarf_Survivors_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                    mime="text/csv",
-                                    help="Save the K Dwarf survivors from Module 1 for use in Module 2"
-                                )
-                            else:
-                                st.warning("No data available to save. Please run Module 1 first.")
+                    btn_left, btn_mid, btn_right = st.columns([1, 1, 1])
+                    with btn_left:
+                        if st.session_state.get('certificate_png') is not None and st.session_state.get('certificate_name') is not None:
+                            st.download_button(
+                                "⬇️ Download Certificate (PNG)",
+                                data=st.session_state.certificate_png,
+                                file_name=st.session_state.certificate_name,
+                                mime="image/png",
+                                type="primary",
+                            )
+                        else:
+                            st.warning("Certificate not available. Please complete Module 1 first.")
+                    with btn_mid:
+                        if has_pipeline_data:
+                            csv_data = st.session_state.pipeline_data.to_csv(index=False)
+                            st.download_button(
+                                "💾 Save K Dwarf Survivors (CSV)",
+                                data=csv_data,
+                                file_name=f"ExoQ_Module1_KDwarf_Survivors_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv",
+                                help="Save the K Dwarf survivors from Module 1 for use in Module 2"
+                            )
+                        else:
+                            st.warning("No data available to save. Please run Module 1 first.")
                         with btn_right:
                             st.button(
                                 "🌐 Submit to ExoQ Gallery (coming soon)",
